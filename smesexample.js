@@ -5,6 +5,8 @@
 //global map variable
 var map;
 
+var currentNineFigureNumber;
+
 
 window.addEventListener('load', function (e) {
 
@@ -75,10 +77,10 @@ function addMarkers(mapMarkerInf, Lat, Long) {
 
     mapMarkerInf.forEach(function (surveyMark) {
         map.addMarker({
-            /*lat: surveyMark.latitude,
-            lng: surveyMark.longitude,*/
-            lat: Lat,
-            lng: Long,
+            lat: surveyMark.latitude,
+            lng: surveyMark.longitude,
+            /*lat: Lat,
+            lng: Long,*/
             title: surveyMark.name,
             infoWindow: {
                 content: '<p style="color: #009688"><b>' + surveyMark.name + '</b></p><hr>' +
@@ -91,9 +93,20 @@ function addMarkers(mapMarkerInf, Lat, Long) {
                     '<p>AHD Height: ' + surveyMark.ahdHeight + '</p>' +
                     '<p>Ellipsoid Height: ' + surveyMark.ellipsoidHeight + '</p>' +
                     '<p>GDA94 Technique: ' + surveyMark.gda94Technique + '</p>' +
-                    '<p>AHD Technique: ' + surveyMark.ahdTechnique + '</p>'
-            }
+                    '<p>AHD Technique: ' + surveyMark.ahdTechnique + '</p>' +
+                    '<button id="sketch' + surveyMark.nineFigureNumber + '">&nbsp;&nbsp;Sketch&nbsp;&nbsp;</button>&nbsp;&nbsp;&nbsp;' +
+                    '<button id="report' + surveyMark.nineFigureNumber + '">&nbsp;&nbsp;Report&nbsp;&nbsp;</button>',
+                domready: function (e) {
+                document.querySelector("[id=sketch" + surveyMark.nineFigureNumber + "]").addEventListener("click", getSurveyMarkSketch, false);
+                document.querySelector("[id=report" + surveyMark.nineFigureNumber + "]").addEventListener("click", getSurveyMarkReport, false);
+                }
+            },
+            click: function (e) {
+                currentNineFigureNumber = surveyMark.nineFigureNumber;
+                console.log("Opening: " + surveyMark.nineFigureNumber);
+            },
         });
+        
 
     });
 
@@ -126,6 +139,15 @@ function geoLocate() {
     });
 
 }
+
+function getSurveyMarkSketch() {
+    alert("Survey Mark Sketch for " + currentNineFigureNumber);
+}
+
+function getSurveyMarkReport() {
+    alert("Survey Mark Report for " + currentNineFigureNumber);
+}
+
 
 function retrieveMarkInformation() {
     return [
