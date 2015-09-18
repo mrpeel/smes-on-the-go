@@ -166,9 +166,10 @@ function geoLocate() {
     GMaps.geolocate({
         success: function (position) {
             map.setCenter(position.coords.latitude, position.coords.longitude);
-            mapMoved();
         }
     });
+
+    mapMoved();
 
 }
 
