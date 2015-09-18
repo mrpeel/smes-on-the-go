@@ -153,8 +153,8 @@ function geoLocate() {
 
     map = new GMaps({
         div: '#map',
-        lat: -37.04,
-        lng: -144.8,
+        lat: -37.813942,
+        lng: 144.9711861,
         dragend: function (e) {
             mapMoved();
         },
@@ -167,12 +167,6 @@ function geoLocate() {
         success: function (position) {
             map.setCenter(position.coords.latitude, position.coords.longitude);
             mapMoved();
-        },
-        error: function (error) {
-            alert('Geolocation failed: ' + error.message);
-        },
-        not_supported: function () {
-            alert("Your browser does not support geolocation");
         }
     });
 
