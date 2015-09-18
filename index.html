@@ -5,7 +5,7 @@
     <meta charset="utf-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <!--<meta http-equiv=Content-Security-Policy content="default-src 'none'; style-src 'self' https://fonts.googleapis.com https://storage.googleapis.com; script-src 'self' 'unsafe-inline' https://storage.googleapis.com;font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com;img-src 'self'; connect-src 'self' http://maps.land.vic.gov.au/lvis/services/smesDataDelivery/">-->
-    <meta name="description" content="A web application to query Google analytics and generate custom graphs.">
+    <meta name="description" content="A sample application which uses the SMES public API.">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title id="bar-title">SMES Web Services Example</title>
 
@@ -16,6 +16,8 @@
     <link href='https://fonts.googleapis.com/css?family=Muli' rel='stylesheet' type='text/css'>
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
     <link rel="stylesheet" href="https://storage.googleapis.com/code.getmdl.io/1.0.4/material.teal-indigo.min.css" />
+    <link rel="stylesheet" href="smes.css" />
+
 </head>
 
 <body>
@@ -40,18 +42,8 @@
 
 
                 <div class="mdl-grid">
-                    <div id="users" class="mdl-card mdl-cell mdl-cell--12-col mdl-shadow--3dp">
-                        <div id="request-response-text">
-                        </div>
-                        <div class="card-bottom-spacer"></div>
-                        <div class="mdl-card__actions mdl-card--border no-print align-card-bottom">
-                            <div class="mdl-typography--font-light mdl-typography--title mdl-color-text--primary">Request and Response</div>
-                            <div class="chart-sub-title-text mdl-color-text--grey-600">Log</div>
-                        </div>
-                    </div>
-
-                    <div id="users" class="mdl-card mdl-cell mdl-cell--12-col mdl-shadow--3dp">
-                        <div id="map" style="height: 800px;">
+                    <div id="users" class="mdl-card mdl-cell mdl-cell--12-col mdl-shadow--3dp map-card">
+                        <div id="map" class="smes-map">
                         </div>
                     </div>
 
