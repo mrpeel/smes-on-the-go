@@ -7,6 +7,11 @@ var map;
 
 var currentNineFigureNumber;
 
+//Define global values used to determine survey mark Type
+var approxAHDValues = ["UNKNOWN", "DERIVED FROM AUSGEOID", "GPS"];
+var scnGDA94Value = "ADJUSTMENT";
+var pcmSearchText = "PCM";
+
 
 window.addEventListener('load', function (e) {
 
@@ -109,15 +114,95 @@ function convertDMStoDecimal(dms) {
 
 }
 
+function returnMarkerIconType(surveyMark) {
+    var isSCN, isPCM, hasAHD, isGDA94Adjusted, isAHDApprox;
+
+    //Set default values for each type
+    isSCN = false;
+    isPCM = false;
+    hasAHD = false;
+    isGDA94Adjusted = false;
+    isAHDApprox = false;
+
+    if (surveyMark.status != "OK") {
+        //Defective mark
+        return "mark-defective";
+    } else {
+        //OK mark - determine other values
+        if (surveyMark.scn === "Yes") {
+            isSCN = true;
+        }
+
+        if (surveyMark.ahdHeight !== "") {
+            hasAHD = true;
+        }
+
+        if (surveyMark.name.indexOf(pcmSearchText) >= 0) {
+            isPCM = true;
+        }
+
+        if (surveyMark.gda94Technique.indexOf(scnGDA94Value) >= 0) {
+            isGDA94Adjusted = true;
+        }
+
+        approxAHDValues.forEach(function (ahdApproxValue) {
+            if (surveyMark.ahdTechnique.indexOf(ahdApproxValue) >= 0) {
+                isAHDApprox = true;
+            }
+        });
+
+        //Now all of the source values have been retrieved, work through possible combinations to determine correct symbol
+        if (!isSCN && !hasAHD) {
+            return "mark-gda94approx-pm";
+        } else if (!isSCN && hasAHD) {
+            return "mark-ahdapprox-pm";
+        } else if (isSCN && isPCM) {
+            return "mark-scn-gda94-pcm";
+        } else if (isSCN && !hasAHD && !isPCM) {
+            return "mark-scn-gda94-pm";
+        } else if (isSCN && hasAHD && !isGDA94Adjusted) {
+            return "mark-scn-ahd-pm";
+        } else if (isSCN && hasAHD && isGDA94Adjusted && !isAHDApprox) {
+            return "mark-scn-gda94-ahd-pm";
+        } else if (isSCN && hasAHD && isGDA94Adjusted && isAHDApprox) {
+            return "mark-scn-gda94-ahdapprox-pm";
+        }
+    }
+
+
+
+}
+
 function addMarkers(mapMarkerInf, Lat, Long) {
 
+    var markerIcon, markerSize, zoomLevel;
+
+    zoomLevel = map.getZoom();
+
+    if (zoomLevel < 16) {
+        markerSize = 10;
+    } else if (zoomLevel >= 16 && zoomLevel < 17) {
+        markerSize = 12;
+    } else if (zoomLevel >= 17 && zoomLevel < 19) {
+        markerSize = 14;
+    } else if (zoomLevel >= 19 && zoomLevel < 21) {
+        markerSize = 16;
+    } else {
+        markerSize = 24;
+    }
+
     mapMarkerInf.forEach(function (surveyMark) {
+        //Determine correct icon - set default values
+        markerIcon = "symbology/" + returnMarkerIconType(surveyMark) + "-" + markerSize + ".png";
+
         map.addMarker({
             lat: convertDMStoDecimal(surveyMark.latitude),
             lng: convertDMStoDecimal(surveyMark.longitude),
             /*lat: Lat,
+            /*lat: Lat,
             lng: Long,*/
             title: surveyMark.name,
+            icon: markerIcon,
             infoWindow: {
                 content: '<p class="mdl-color-text--primary"><b>' + surveyMark.name + '</b></p><hr>' +
                     '<p>Nine Figure Number: ' + surveyMark.nineFigureNumber + '</p>' +
