@@ -8,7 +8,7 @@ var map;
 var currentNineFigureNumber;
 
 //Define global values used to determine survey mark Type
-var approxAHDValues = ["UNKNOWN", "DERIVED FROM AUSGEOID", "GPS"];
+var scnAHDValues = ["ZEROTH ORDER", "2ND ORDER", "3RD ORDER", "SPIRIT LEVELLING"];
 var scnGDA94Value = "ADJUSTMENT";
 var pcmSearchText = "PCM";
 
@@ -59,6 +59,9 @@ function mapMoved() {
 
     //Clear markers
     map.removeMarkers();
+
+    //Clear overlays
+    map.removeOverlays();
 
     addMarkers(markInf, coords.H, coords.L);
 }
@@ -115,14 +118,14 @@ function convertDMStoDecimal(dms) {
 }
 
 function returnMarkerIconType(surveyMark) {
-    var isSCN, isPCM, hasAHD, isGDA94Adjusted, isAHDApprox;
+    var isSCN, isPCM, hasAHD, isSCNGDA94, isSCNAHD;
 
     //Set default values for each type
     isSCN = false;
     isPCM = false;
     hasAHD = false;
-    isGDA94Adjusted = false;
-    isAHDApprox = false;
+    isSCNGDA94 = false;
+    isSCNAHD = false;
 
     if (surveyMark.status != "OK") {
         //Defective mark
@@ -132,22 +135,23 @@ function returnMarkerIconType(surveyMark) {
         if (surveyMark.scn === "Yes") {
             isSCN = true;
         }
-
+        //Check if it has an AHD Height
         if (surveyMark.ahdHeight !== "") {
             hasAHD = true;
         }
-
-        if (surveyMark.name.indexOf(pcmSearchText) >= 0) {
+        //Check if PCM - Nine Figure Number starts with 1
+        if (String(surveyMark.nineFigureNumber).indexOf("1") === 0) {
             isPCM = true;
         }
-
+        //Retrieve GDA94 technique to determine whether SCN GDA94
         if (surveyMark.gda94Technique.indexOf(scnGDA94Value) >= 0) {
-            isGDA94Adjusted = true;
+            isSCNGDA94 = true;
         }
 
-        approxAHDValues.forEach(function (ahdApproxValue) {
+        //Check AHD technique to determine whether it is SCN AHD
+        scnAHDValues.forEach(function (ahdApproxValue) {
             if (surveyMark.ahdTechnique.indexOf(ahdApproxValue) >= 0) {
-                isAHDApprox = true;
+                isSCNAHD = true;
             }
         });
 
@@ -160,11 +164,11 @@ function returnMarkerIconType(surveyMark) {
             return "mark-scn-gda94-pcm";
         } else if (isSCN && !hasAHD && !isPCM) {
             return "mark-scn-gda94-pm";
-        } else if (isSCN && hasAHD && !isGDA94Adjusted) {
+        } else if (isSCN && hasAHD && !isSCNGDA94) {
             return "mark-scn-ahd-pm";
-        } else if (isSCN && hasAHD && isGDA94Adjusted && !isAHDApprox) {
+        } else if (isSCN && hasAHD && isSCNGDA94 && isSCNAHD) {
             return "mark-scn-gda94-ahd-pm";
-        } else if (isSCN && hasAHD && isGDA94Adjusted && isAHDApprox) {
+        } else if (isSCN && hasAHD && isSCNGDA94 && !isSCNAHD) {
             return "mark-scn-gda94-ahdapprox-pm";
         }
     }
@@ -176,6 +180,7 @@ function returnMarkerIconType(surveyMark) {
 function addMarkers(mapMarkerInf, Lat, Long) {
 
     var markerIcon, markerSize, zoomLevel;
+    var addOverlay = false;
 
     zoomLevel = map.getZoom();
 
@@ -187,8 +192,10 @@ function addMarkers(mapMarkerInf, Lat, Long) {
         markerSize = 14;
     } else if (zoomLevel >= 19 && zoomLevel < 21) {
         markerSize = 16;
+        addOverlay = true;
     } else {
         markerSize = 24;
+        addOverlay = true;
     }
 
     mapMarkerInf.forEach(function (surveyMark) {
@@ -229,6 +236,17 @@ function addMarkers(mapMarkerInf, Lat, Long) {
             },
         });
 
+
+        //Draw overlay if zoom is > 17
+        if (addOverlay) {
+            map.drawOverlay({
+                lat: convertDMStoDecimal(surveyMark.latitude),
+                lng: convertDMStoDecimal(surveyMark.longitude),
+                verticalAlign: 'bottom',
+                horiztonalAlign: 'center',
+                content: '<div class="overlay"><span class="overlay-text">' + surveyMark.name + '</span></div>'
+            });
+        }
 
     });
 
