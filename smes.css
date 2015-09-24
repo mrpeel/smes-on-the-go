@@ -11,3 +11,18 @@ body {
     /*height: 650px;*/
     height: calc(100vh - 100px);
 }
+.overlay {
+    display: block;
+    background: rgba(242, 245, 248, 0.7);
+    border: solid 1px rgba(242, 245, 248, 0.7);
+    border-radius: 3px;
+    box-shadow: 1px 1px 2px rgba(108, 107, 107, 0.7);
+    padding-left: 3px;
+    padding-right: 3px;
+    text-align: center;
+}
+.overlay-text {
+    color: rgba(0, 0, 0, 0.95);
+    text-align: center;
+    z-index: 1;
+}
