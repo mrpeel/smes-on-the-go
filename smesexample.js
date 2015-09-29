@@ -10,7 +10,7 @@ var currentRadius;
 var mapSpinner;
 var locateButton;
 var zoomInMsg;
-var baseURL = 'http://maps.test.land.vic.gov.au/lvis/services/smesDataDelivery';
+var baseURL = 'https://maps.test.land.vic.gov.au/lvis/services/smesDataDelivery';
 
 //Define global values used to determine survey mark Type
 var scnAHDValues = ["ZEROTH ORDER", "2ND ORDER", "3RD ORDER", "SPIRIT LEVELLING"];
