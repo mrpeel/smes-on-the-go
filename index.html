@@ -7,7 +7,7 @@
     <!--<meta http-equiv=Content-Security-Policy content="default-src 'none'; style-src 'self' https://fonts.googleapis.com https://storage.googleapis.com; script-src 'self' 'unsafe-inline' https://storage.googleapis.com;font-src 'self' https://fonts.googleapis.com https://fonts.gstatic.com;img-src 'self'; connect-src 'self' http://maps.land.vic.gov.au/lvis/services/smesDataDelivery/">-->
     <meta name="description" content="A sample application which uses the SMES public API.">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title id="bar-title">SMES Web Services Example</title>
+    <title id="bar-title">SMES API Example</title>
 
     <meta name="application-name" content="SMES Web Services Example" />
     <link rel="icon" href="favicon.ico" />
@@ -29,7 +29,7 @@
             <div class="mdl-layout__header-row">
                 <!-- Title -->
                 <div id="load-bar" class="loader"></div>
-                <span class="mdl-layout-title title-text" id="page-title">SMES Web Services Example</span>
+                <span class="mdl-layout-title title-text" id="page-title">SMES API Example</span>
                 <div id="print-sub-heading" class="mdl-typography--font-light mdl-typography--title print-only">
                 </div>
 
@@ -45,6 +45,12 @@
                     <div id="users" class="mdl-card mdl-cell mdl-cell--12-col mdl-shadow--3dp map-card">
                         <div id="map" class="smes-map">
                         </div>
+                        <div id="map-spinner" class="mdl-spinner mdl-js-spinner is-active map-center hidden"></div>
+                        <div id="zoom-in-msg" class="zoom-in-message hidden"><span class="zoom-in-message-text">Zoom in to see marks</span></div>
+                        <button id="locate" class="location mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--icon">
+                            <i class="material-icons">my_location</i>
+                        </button>
+
                     </div>
 
 
