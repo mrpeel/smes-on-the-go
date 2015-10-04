@@ -5,14 +5,21 @@
 //global map variable
 var map;
 
+//variable to hold running data
 var currentNineFigureNumber;
 var currentRadius;
+var loadedMarks = [];
+var loadedOverlays = [];
+
+//Variables for display
 var mapSpinner;
 var locateButton;
 var zoomInMsg;
-var baseURL = 'https://maps.test.land.vic.gov.au/lvis/services/smesDataDelivery';
+var displayingOverlays = false;
 
-//Define global values used to determine survey mark Type
+
+//Varibales for map data
+var baseURL = 'https://maps.test.land.vic.gov.au/lvis/services/smesDataDelivery';
 var scnAHDValues = ["ZEROTH ORDER", "2ND ORDER", "3RD ORDER", "SPIRIT LEVELLING"];
 var scnGDA94Value = "ADJUSTMENT";
 var pcmSearchText = "PCM";
@@ -50,11 +57,6 @@ function mapMoved() {
 
     //console.log('Finished moving or zooming map:' + coords.H + ', ' + coords.L);
 
-    //Clear markers
-    map.removeMarkers();
-
-    //Clear overlays
-    map.removeOverlays();
 
     if (currentRadius > 0 && currentRadius <= 2) {
 
@@ -159,54 +161,95 @@ function addMarkers(mapMarkerInf) {
         addOverlay = true;
     }
 
-    mapMarkerInf.forEach(function (surveyMark) {
-        //Determine correct icon - set default values
-        markerIcon = "symbology/" + returnMarkerIconType(surveyMark) + "-" + markerSize + ".png";
+    //Was displaying overlays and now scale is too large for overlays so remove from screen
+    if (displayingOverlays && !addOverlay) {
+        //Clear overlays
+        map.removeOverlays();
+        loadedOverlays = [];
+    }
 
-        map.addMarker({
-            lat: surveyMark.latitude,
-            lng: surveyMark.longitude,
-            /*lat: Lat,
-            /*lat: Lat,
-            lng: Long,*/
-            title: surveyMark.name,
-            icon: markerIcon,
-            infoWindow: {
-                content: '<p class="mdl-color-text--primary"><b>' + surveyMark.name + '</b></p><hr>' +
-                    '<p>Nine Figure Number: ' + surveyMark.nineFigureNumber + '</p>' +
-                    '<p>Status: ' + surveyMark.status + '</p>' +
-                    '<p>SCN: ' + surveyMark.scn + '</p>' +
-                    '<p>Zone: ' + surveyMark.zone + '</p>' +
-                    '<p>Easting: ' + surveyMark.easting + '</p>' +
-                    '<p>Northing: ' + surveyMark.northing + '</p>' +
-                    '<p>AHD Height: ' + surveyMark.ahdHeight + '</p>' +
-                    '<p>Ellipsoid Height: ' + surveyMark.ellipsoidHeight + '</p>' +
-                    '<p>GDA94 Technique: ' + surveyMark.gda94Technique + '</p>' +
-                    '<p>AHD Technique: ' + surveyMark.ahdTechnique + '</p>' +
-                    '<hr>' +
-                    '<button id="sketch' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--primary mdl-js-ripple-effect fade-in">&nbsp;&nbsp;Sketch&nbsp;&nbsp;</button>&nbsp;&nbsp;&nbsp;' +
-                    '<button id="report' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--primary mdl-js-ripple-effect fade-in">&nbsp;&nbsp;Report&nbsp;&nbsp;</button>',
-                domready: function (e) {
-                    document.querySelector("[id=sketch" + surveyMark.nineFigureNumber + "]").addEventListener("click", getSurveyMarkSketch, false);
-                    document.querySelector("[id=report" + surveyMark.nineFigureNumber + "]").addEventListener("click", getSurveyMarkReport, false);
-                }
-            },
-            click: function (e) {
-                currentNineFigureNumber = surveyMark.nineFigureNumber;
-                console.log("Opening: " + surveyMark.nineFigureNumber);
-            },
-        });
+
+
+    mapMarkerInf.forEach(function (surveyMark) {
+        //Determine correct icon type
+        var iconType = returnMarkerIconType(surveyMark);
+
+        //Set icon file based on type and size
+        markerIcon = "symbology/" + iconType + "-" + markerSize + ".png";
+
+        //check if this mark has been loaded
+        if (loadedMarks.indexOf(surveyMark.nineFigureNumber) === -1) {
+
+            map.addMarker({
+                lat: surveyMark.latitude,
+                lng: surveyMark.longitude,
+                /*lat: Lat,
+                /*lat: Lat,
+                lng: Long,*/
+                title: surveyMark.name,
+                icon: markerIcon,
+                infoWindow: {
+                    content: '<p class="mdl-color-text--primary"><b>' + surveyMark.name + '</b></p><hr>' +
+                        '<p>Nine Figure Number: ' + surveyMark.nineFigureNumber + '</p>' +
+                        '<p>Status: ' + surveyMark.status + '</p>' +
+                        '<p>SCN: ' + surveyMark.scn + '</p>' +
+                        '<p>Zone: ' + surveyMark.zone + '</p>' +
+                        '<p>Easting: ' + surveyMark.easting + '</p>' +
+                        '<p>Northing: ' + surveyMark.northing + '</p>' +
+                        '<p>AHD Height: ' + surveyMark.ahdHeight + '</p>' +
+                        '<p>Ellipsoid Height: ' + surveyMark.ellipsoidHeight + '</p>' +
+                        '<p>GDA94 Technique: ' + surveyMark.gda94Technique + '</p>' +
+                        '<p>AHD Technique: ' + surveyMark.ahdTechnique + '</p>' +
+                        '<hr>' +
+                        '<button id="sketch' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--primary mdl-js-ripple-effect fade-in">&nbsp;&nbsp;Sketch&nbsp;&nbsp;</button>&nbsp;&nbsp;&nbsp;' +
+                        '<button id="report' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--primary mdl-js-ripple-effect fade-in">&nbsp;&nbsp;Report&nbsp;&nbsp;</button>',
+                    domready: function (e) {
+                        document.querySelector("[id=sketch" + surveyMark.nineFigureNumber + "]").addEventListener("click", getSurveyMarkSketch, false);
+                        document.querySelector("[id=report" + surveyMark.nineFigureNumber + "]").addEventListener("click", getSurveyMarkReport, false);
+                    }
+                },
+                click: function (e) {
+                    currentNineFigureNumber = surveyMark.nineFigureNumber;
+                    console.log("Opening: " + surveyMark.nineFigureNumber);
+                },
+            });
+
+            //Add mark to loaded marks
+            loadedMarks.push(surveyMark.nineFigureNumber);
+        } else {
+            //Mark has been loaded so check if it has the correct size symbol
+
+            //Retrieve correct marker
+            var loadedMarker = map.markers.filter(function (marker) {
+                return marker.title === surveyMark.name;
+            });
+
+            //check the symbol, and refresh if necessary
+            if (loadedMarker[0].icon !== markerIcon) {
+                loadedMarker[0].setIcon(markerIcon);
+            }
+        }
 
 
         //Draw overlay if zoom is > 17
         if (addOverlay) {
-            map.drawOverlay({
-                lat: surveyMark.latitude,
-                lng: surveyMark.longitude,
-                verticalAlign: 'bottom',
-                horiztonalAlign: 'center',
-                content: '<div class="overlay"><span class="overlay-text">' + surveyMark.name + '</span></div>'
-            });
+            displayingOverlays = true;
+
+            //check if this overlay has been loaded
+            if (loadedOverlays.indexOf(surveyMark.nineFigureNumber) === -1) {
+
+                map.drawOverlay({
+                    lat: surveyMark.latitude,
+                    lng: surveyMark.longitude,
+                    verticalAlign: 'bottom',
+                    horiztonalAlign: 'center',
+                    content: '<div class="overlay"><span class="overlay-text">' + surveyMark.name + '</span></div>'
+                });
+
+                //Add mark to loaded overlays
+                loadedOverlays.push(surveyMark.nineFigureNumber);
+
+            }
         }
 
     });
