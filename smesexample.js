@@ -1,6 +1,6 @@
 /** Set up global types so JSHint doesn't trigger warnings that they are not defined */
 
-/*global xr, GMaps, Promise, setTimeout, window, document, console, alert */
+/*global xr, GMaps, Promise, setTimeout, window, document, console, alert, ArrayBuffer, Uint8Array, Blob, saveAs */
 
 //global map variable
 var map;
@@ -19,7 +19,7 @@ var displayingOverlays = false;
 
 
 //Varibales for map data
-var baseURL = 'https://maps.test.land.vic.gov.au/lvis/services/smesDataDelivery';
+var baseURL = 'https://maps.land.vic.gov.au/lvis/services/smesDataDelivery';
 var scnAHDValues = ["ZEROTH ORDER", "2ND ORDER", "3RD ORDER", "SPIRIT LEVELLING"];
 var scnGDA94Value = "ADJUSTMENT";
 var pcmSearchText = "PCM";
@@ -288,8 +288,8 @@ function geoLocate() {
 
 function getSurveyMarkSketch() {
     getSurveyMarkSketchResponse(currentNineFigureNumber).then(function (markSketchData) {
-            // Open PDF in new window
-            window.open("data:application/pdf;base64," + encodeURI(markSketchData.document), "Survey Sketch Report " + currentNineFigureNumber);
+
+            saveAs(dataURItoBlob("data:application/pdf;base64," + encodeURI(markSketchData.document)), "Survey Mark " + currentNineFigureNumber + " Sketch Report.pdf");
 
         })
         .catch(function (err) {
@@ -301,8 +301,8 @@ function getSurveyMarkSketch() {
 function getSurveyMarkReport() {
 
     getSurveyMarkReportResponse(currentNineFigureNumber).then(function (markReportData) {
-            // Open PDF in new window
-            window.open("data:application/pdf;base64," + encodeURI(markReportData.document), "Survey Mark Report " + currentNineFigureNumber);
+
+            saveAs(dataURItoBlob("data:application/pdf;base64," + encodeURI(markReportData.document)), "Survey Mark " + currentNineFigureNumber + " Full Report.pdf");
 
         })
         .catch(function (err) {
@@ -457,4 +457,24 @@ function getDistanceKms(point1Lat, point1Lng, point2Lat, point2Lng) {
 
 function calcRad(x) {
     return x * Math.PI / 180;
+}
+
+function dataURItoBlob(dataURI, callback) {
+    // convert base64 to raw binary data held in a string
+    // doesn't handle URLEncoded DataURIs - see SO answer #6850276 for code that does this
+    var byteString = window.atob(dataURI.split(',')[1]);
+
+    // separate out the mime component
+    var mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
+
+    // write the bytes of the string to an ArrayBuffer
+    var ab = new ArrayBuffer(byteString.length);
+    var ia = new Uint8Array(ab);
+    for (var i = 0; i < byteString.length; i++) {
+        ia[i] = byteString.charCodeAt(i);
+    }
+
+    // write the ArrayBuffer to a blob, and you're done
+    var bb = new Blob([ab]);
+    return bb;
 }
