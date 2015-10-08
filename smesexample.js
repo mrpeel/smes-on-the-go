@@ -41,26 +41,28 @@ window.addEventListener('load', function (e) {
 
 function mapMoved() {
     var markInf;
-    var coords = map.getCenter();
+    var coords = {};
 
+
+    coords.lat = map.getCenter().lat();
+    coords.lng = map.getCenter().lng();
 
     //Check for wrapped coords
-    if (coords.H < (-180)) {
-        coords.H = coords.H + 360;
+    if (coords.lat < (-180)) {
+        coords.lat = coords.lat + 360;
     }
 
     //Check for wrapped coords
-    if (coords.L < (-180)) {
-        coords.L = coords.L + 360;
+    if (coords.lng < (-180)) {
+        coords.lng = coords.lng + 360;
     }
 
 
-    //console.log('Finished moving or zooming map:' + coords.H + ', ' + coords.L);
-
+    //console.log('Finished moving or zooming map:' + coords.lat + ', ' + coords.lng);
 
     if (currentRadius > 0 && currentRadius <= 2) {
 
-        retrieveMarkInformation(coords.H, coords.L).then(function (markInf) {
+        retrieveMarkInformation(coords.lat, coords.lng).then(function (markInf) {
                 if (markInf.length > 0) {
                     //Draw markers if value returned
                     addMarkers(markInf);
@@ -420,13 +422,12 @@ function getSurveyMarkReportResponse(nineFigureNumber) {
 }
 
 function checkSizeofCurrentMap() {
-    var centreCoords = map.getCenter();
     var mapBounds = map.getBounds();
     //console.log(mapBounds);
     //console.log(centreCoords);
 
     if (typeof mapBounds !== 'undefined') {
-        var mapRadius = getDistanceKms(centreCoords.H, centreCoords.L, mapBounds.Ka.H, mapBounds.Ga.H);
+        var mapRadius = getDistanceKms(map.getCenter().lat(), map.getCenter().lng(), map.getBounds().getSouthWest().lat(), map.getBounds().getSouthWest().lng());
         //console.log("Radius in kms:" + (mapRadius / 1000));
 
         currentRadius = (mapRadius / 1000);
