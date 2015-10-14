@@ -41,6 +41,37 @@ window.addEventListener('load', function (e) {
 
 }, false);
 
+
+function createMap() {
+
+    map = new GMaps({
+        div: '#map',
+        lat: -37.813942,
+        lng: 144.9711861,
+        zoom_changed: function (e) {
+            checkSizeofCurrentMap();
+        },
+        idle: function (e) {
+            mapMoved();
+        }
+
+    });
+
+}
+
+function geoLocate() {
+
+    GMaps.geolocate({
+        success: function (position) {
+            map.setCenter(position.coords.latitude, position.coords.longitude);
+        }
+    });
+
+    checkSizeofCurrentMap();
+    mapMoved();
+
+}
+
 function mapMoved() {
     //Wait 500 ms to check that this is not part of a longer map moving sequence
     var thisMapMove = Date.now();
@@ -274,35 +305,6 @@ function addMarkers(mapMarkerInf) {
 
 }
 
-function createMap() {
-
-    map = new GMaps({
-        div: '#map',
-        lat: -37.813942,
-        lng: 144.9711861,
-        dragend: function (e) {
-            mapMoved();
-        },
-        zoom_changed: function (e) {
-            checkSizeofCurrentMap();
-            mapMoved();
-        }
-    });
-
-}
-
-function geoLocate() {
-
-    GMaps.geolocate({
-        success: function (position) {
-            map.setCenter(position.coords.latitude, position.coords.longitude);
-        }
-    });
-
-    checkSizeofCurrentMap();
-    mapMoved();
-
-}
 
 function displayError() {
     errorMsg.classList.remove("hidden");
