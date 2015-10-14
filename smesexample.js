@@ -15,7 +15,9 @@ var loadedOverlays = [];
 var mapSpinner;
 var locateButton;
 var zoomInMsg;
+var errorMsg;
 var displayingOverlays = false;
+var lastMapMove = Date.now();
 
 
 //Varibales for map data
@@ -29,6 +31,7 @@ window.addEventListener('load', function (e) {
 
     mapSpinner = document.querySelector("[id=map-spinner]");
     zoomInMsg = document.querySelector("[id=zoom-in-msg]");
+    errorMsg = document.querySelector("[id=error-msg]");
     locateButton = document.querySelector("[id=locate]");
     locateButton.addEventListener("click", geoLocate, false);
 
@@ -38,8 +41,21 @@ window.addEventListener('load', function (e) {
 
 }, false);
 
-
 function mapMoved() {
+    //Wait 500 ms to check that this is not part of a longer map moving sequence
+    var thisMapMove = Date.now();
+    lastMapMove = thisMapMove;
+
+    window.setTimeout(function () {
+        //if the last map move is still equal to this map move, then no other events have happened so redraw the map
+        if (thisMapMove === lastMapMove) {
+            redrawMapInfo();
+        }
+    }, 500);
+
+}
+
+function redrawMapInfo() {
     var markInf;
     var coords = {};
 
@@ -288,7 +304,21 @@ function geoLocate() {
 
 }
 
+function displayError() {
+    errorMsg.classList.remove("hidden");
+    errorMsg.textContent = "Too many requests have been sent to the server.  Please wait...";
+    window.setTimeout(function () {
+        clearError();
+    }, 1000);
+}
+
+function clearError() {
+    errorMsg.classList.add("hidden");
+}
+
 function getSurveyMarkSketch() {
+    clearError();
+
     getSurveyMarkSketchResponse(currentNineFigureNumber).then(function (markSketchData) {
 
             saveAs(dataURItoBlob("data:application/pdf;base64," + encodeURI(markSketchData.document)), "Survey Mark " + currentNineFigureNumber + " Sketch Report.pdf");
@@ -296,11 +326,13 @@ function getSurveyMarkSketch() {
         })
         .catch(function (err) {
             console.log(err);
+            displayError(err);
         });
 
 }
 
 function getSurveyMarkReport() {
+    clearError();
 
     getSurveyMarkReportResponse(currentNineFigureNumber).then(function (markReportData) {
 
@@ -309,6 +341,7 @@ function getSurveyMarkReport() {
         })
         .catch(function (err) {
             console.log(err);
+            displayError(err);
         });
 
 
@@ -316,6 +349,7 @@ function getSurveyMarkReport() {
 
 
 function retrieveMarkInformation(cLat, cLong) {
+    clearError();
 
     //Show map spinner
     mapSpinner.classList.remove("hidden");
@@ -354,6 +388,7 @@ function retrieveMarkInformation(cLat, cLong) {
                     } else {
                         //another message returned, log it
                         console.log(jsonResponse.messages.message);
+                        displayError(jsonResponse.messages.message);
                         mapSpinner.classList.add("hidden");
                     }
                 }
@@ -361,6 +396,7 @@ function retrieveMarkInformation(cLat, cLong) {
             })
             .catch(function (err) {
                 console.log(err);
+                displayError();
                 return Promise.reject(err);
             });
     });
@@ -389,6 +425,7 @@ function getSurveyMarkSketchResponse(nineFigureNumber) {
             })
             .catch(function (err) {
                 console.log(err);
+                displayError();
                 return Promise.reject(err);
             });
     });
@@ -415,7 +452,7 @@ function getSurveyMarkReportResponse(nineFigureNumber) {
 
             })
             .catch(function (err) {
-                console.log(err);
+                console.log();
                 return Promise.reject(err);
             });
     });
