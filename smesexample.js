@@ -17,7 +17,7 @@ var locateButton;
 var zoomInMsg;
 var errorMsg;
 var displayingOverlays = false;
-var lastMapMove = Date.now();
+var nextMapMove = Date.now();
 
 
 //Varibales for map data
@@ -71,8 +71,39 @@ function geoLocate() {
 
 }
 
-var mapMoved = debounce(function () {
 
+/* Calls the redrawMapInfo function  at most once per 2500 number of milliseconds.
+ * The function will execute on both the leading and trailing edge
+ * Relies on a global variable to track the time period 
+ */
+function mapMoved() {
+    var timeout,
+        immediate = false,
+        wait = 2500;
+
+    if (Date.now() >= nextMapMove) {
+        nextMapMove = Date.now() + wait;
+        immediate = true;
+    }
+
+    var later = function () {
+        timeout = null;
+        if (!immediate) {
+            redrawMapInfo();
+        }
+    };
+    var callNow = immediate && !timeout;
+
+    window.clearTimeout(timeout);
+    timeout = window.setTimeout(later, wait);
+
+    if (callNow) {
+        redrawMapInfo();
+    }
+}
+
+
+function redrawMapInfo() {
     var markInf;
     var coords = {};
 
@@ -112,7 +143,7 @@ var mapMoved = debounce(function () {
     }
 
 
-}, 750);
+}
 
 
 function returnMarkerIconType(surveyMark) {
@@ -503,25 +534,4 @@ function dataURItoBlob(dataURI, callback) {
     // write the ArrayBuffer to a blob, and you're done
     var bb = new Blob([ab]);
     return bb;
-}
-
-/* Returns a function, that, as long as it continues to be invoked, will not
- * be triggered. The function will be called after it stops being called for
- * N milliseconds. If `immediate` is passed, trigger the function on the
- * leading edge, instead of the trailing.
- */
-function debounce(func, wait, immediate) {
-    var timeout;
-    return function () {
-        var context = this,
-            args = arguments;
-        var later = function () {
-            timeout = null;
-            if (!immediate) func.apply(context, args);
-        };
-        var callNow = immediate && !timeout;
-        window.clearTimeout(timeout);
-        timeout = window.setTimeout(later, wait);
-        if (callNow) func.apply(context, args);
-    };
 }
