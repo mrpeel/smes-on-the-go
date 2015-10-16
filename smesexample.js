@@ -18,6 +18,7 @@ var zoomInMsg;
 var errorMsg;
 var displayingOverlays = false;
 var nextMapMove = Date.now();
+var timeOut;
 
 
 //Varibales for map data
@@ -72,34 +73,26 @@ function geoLocate() {
 }
 
 
-/* Calls the redrawMapInfo function  at most once per 2500 number of milliseconds.
+/* Calls the redrawMapInfo function  at most once per 2000 milliseconds.
  * The function will execute on both the leading and trailing edge
  * Relies on a global variable to track the time period 
  */
 function mapMoved() {
-    var timeout,
-        immediate = false,
-        wait = 2500;
+    //var timeout,
+    var immediate = false,
+        wait = 2000;
 
-    if (Date.now() >= nextMapMove) {
+    if (Date.now() >= nextMapMove && !timeOut) {
         nextMapMove = Date.now() + wait;
-        immediate = true;
-    }
-
-    var later = function () {
-        timeout = null;
-        if (!immediate) {
-            redrawMapInfo();
-        }
-    };
-    var callNow = immediate && !timeout;
-
-    window.clearTimeout(timeout);
-    timeout = window.setTimeout(later, wait);
-
-    if (callNow) {
         redrawMapInfo();
+    } else {
+        window.clearTimeout(timeOut);
+        timeOut = window.setTimeout(function () {
+            redrawMapInfo();
+            timeOut = null;
+        }, wait);
     }
+
 }
 
 
