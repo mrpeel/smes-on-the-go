@@ -26,7 +26,6 @@ var scnAHDValues = ["ZEROTH ORDER", "2ND ORDER", "3RD ORDER", "SPIRIT LEVELLING"
 var scnGDA94Value = "ADJUSTMENT";
 var pcmSearchText = "PCM";
 
-
 window.addEventListener('load', function (e) {
 
     mapSpinner = document.querySelector("[id=map-spinner]");
@@ -72,21 +71,8 @@ function geoLocate() {
 
 }
 
-function mapMoved() {
-    //Wait 500 ms to check that this is not part of a longer map moving sequence
-    var thisMapMove = Date.now();
-    lastMapMove = thisMapMove;
+var mapMoved = debounce(function () {
 
-    window.setTimeout(function () {
-        //if the last map move is still equal to this map move, then no other events have happened so redraw the map
-        if (thisMapMove === lastMapMove) {
-            redrawMapInfo();
-        }
-    }, 500);
-
-}
-
-function redrawMapInfo() {
     var markInf;
     var coords = {};
 
@@ -126,7 +112,7 @@ function redrawMapInfo() {
     }
 
 
-}
+}, 750);
 
 
 function returnMarkerIconType(surveyMark) {
@@ -517,4 +503,25 @@ function dataURItoBlob(dataURI, callback) {
     // write the ArrayBuffer to a blob, and you're done
     var bb = new Blob([ab]);
     return bb;
+}
+
+/* Returns a function, that, as long as it continues to be invoked, will not
+ * be triggered. The function will be called after it stops being called for
+ * N milliseconds. If `immediate` is passed, trigger the function on the
+ * leading edge, instead of the trailing.
+ */
+function debounce(func, wait, immediate) {
+    var timeout;
+    return function () {
+        var context = this,
+            args = arguments;
+        var later = function () {
+            timeout = null;
+            if (!immediate) func.apply(context, args);
+        };
+        var callNow = immediate && !timeout;
+        window.clearTimeout(timeout);
+        timeout = window.setTimeout(later, wait);
+        if (callNow) func.apply(context, args);
+    };
 }
