@@ -1,6 +1,6 @@
 /** Set up global types so JSHint doesn't trigger warnings that they are not defined */
 
-/*global xr, GMaps, Promise, setTimeout, window, document, console, alert, ArrayBuffer, Uint8Array, Blob, saveAs */
+/*global xr, GMaps, Promise, setTimeout, window, document, console, alert, ArrayBuffer, Uint8Array, Blob, saveAs, darkGrey, coolGrey, paleDawn, shiftWorker, simpleLight, muted, iovation */
 
 //global map variable
 var map;
@@ -48,6 +48,7 @@ function createMap() {
         div: '#map',
         lat: -37.813942,
         lng: 144.9711861,
+        styles: iovation,
         zoom_changed: function (e) {
             checkSizeofCurrentMap();
         },
@@ -80,7 +81,9 @@ function geoLocate() {
 function mapMoved() {
     //var timeout,
     var immediate = false,
-        wait = 2000;
+        wait = 1000;
+
+    console.log(Date.now() + ": map moved");
 
     if (Date.now() >= nextMapMove && !timeOut) {
         nextMapMove = Date.now() + wait;
@@ -474,6 +477,7 @@ function checkSizeofCurrentMap() {
     var mapBounds = map.getBounds();
     //console.log(mapBounds);
     //console.log(centreCoords);
+    console.log(Date.now() + ": zoom changed");
 
     if (typeof mapBounds !== 'undefined') {
         var mapRadius = getDistanceKms(map.getCenter().lat(), map.getCenter().lng(), map.getBounds().getSouthWest().lat(), map.getBounds().getSouthWest().lng());
