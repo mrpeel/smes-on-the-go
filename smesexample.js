@@ -22,7 +22,7 @@ var timeOut;
 
 
 //Varibales for map data
-var baseURL = 'https://maps.test.land.vic.gov.au/lvis/services/smesDataDelivery';
+var baseURL = 'https://maps.land.vic.gov.au/lvis/services/smesDataDelivery';
 var scnAHDValues = ["ZEROTH ORDER", "2ND ORDER", "3RD ORDER", "SPIRIT LEVELLING"];
 var scnGDA94Value = "ADJUSTMENT";
 var pcmSearchText = "PCM";
