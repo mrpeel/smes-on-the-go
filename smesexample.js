@@ -288,7 +288,7 @@ function addMarkers(mapMarkerInf) {
         //check if this mark has been loaded
         if (loadedMarks.indexOf(surveyMark.nineFigureNumber) === -1) {
 
-            if (loadMobile === true) {
+            if (loadMobile !== "") {
                 navigateString = '<button id="navigate' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--primary mdl-js-ripple-effect fade-in">&nbsp;&nbsp;Navigate to mark&nbsp;&nbsp;</button><br>';
             } else {
                 navigateString = '';
@@ -378,16 +378,18 @@ function addMarkers(mapMarkerInf) {
 
 /**
  * Attempt to detect the page being used ona  mobile device.
- * @return {boolean} whether the current browser isd being used on an Android / iOS mobile device
+ * @return {string} - Android, iOS or empty string
  */
 function isMobile() {
 
     var userAgent = navigator.userAgent;
 
-    if (userAgent.match(/Android/i) || userAgent.match(/iPhone/i) || userAgent.match(/iPad/i)) {
-        return true;
+    if (userAgent.match(/Android/i)) {
+        return "Android";
+    } else if (userAgent.match(/iPhone/i) || userAgent.match(/iPad/i)) {
+        return "iOS";
     } else {
-        return false;
+        return "";
     }
 
 }
@@ -417,7 +419,16 @@ function startNavigation() {
     clearError();
 
     if (typeof currentLatLng.lat === "number" && typeof currentLatLng.lng === "number") {
-        window.open("google.navigation:q=" + currentLatLng.lat + "," + currentLatLng.lng);
+        var navURL;
+
+        if (loadMobile === "Android") {
+            navURL = "google.navigation:q=" + currentLatLng.lat + "," + currentLatLng.lng;
+        } else {
+            navURL = "http: //maps.apple.com/?q=" + currentLatLng.lat + "," + currentLatLng.lng;
+        }
+
+        window.open(navURL);
+
     }
 
 
