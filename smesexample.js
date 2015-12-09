@@ -264,8 +264,8 @@ function addMarkers(mapMarkerInf) {
                         '<p>GDA94 Technique: ' + surveyMark.gda94Technique + '</p>' +
                         '<p>AHD Technique: ' + surveyMark.ahdTechnique + '</p>' +
                         '<hr>' +
-                        '<button id="sketch' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--primary mdl-js-ripple-effect fade-in">&nbsp;&nbsp;Sketch&nbsp;&nbsp;</button>&nbsp;&nbsp;&nbsp;' +
-                        '<button id="report' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--primary mdl-js-ripple-effect fade-in">&nbsp;&nbsp;Report&nbsp;&nbsp;</button>' +
+                        '<button id="sketch' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--primary mdl-js-ripple-effect fade-in">&nbsp;&nbsp;Sketch&nbsp;&nbsp;</button>&nbsp;&nbsp;&nbsp;<p>' +
+                        '<button id="report' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--primary mdl-js-ripple-effect fade-in">&nbsp;&nbsp;Report&nbsp;&nbsp;</button><p>' +
                         '<button id="navigate' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--primary mdl-js-ripple-effect fade-in">&nbsp;&nbsp;Navigate&nbsp;&nbsp;</button>',
                     domready: function (e) {
                         document.querySelector("[id=sketch" + surveyMark.nineFigureNumber + "]").addEventListener("click", getSurveyMarkSketch, false);
