@@ -7,6 +7,7 @@ var map;
 
 //variable to hold running data
 var currentNineFigureNumber;
+var currentLatLng = {};
 var currentRadius;
 var loadedMarks = [];
 var loadedOverlays = [];
@@ -22,7 +23,7 @@ var timeOut;
 
 
 //Varibales for map data
-var baseURL = 'https://maps.test.land.vic.gov.au/lvis/services/smesDataDelivery';
+var baseURL = 'https://maps.land.vic.gov.au/lvis/services/smesDataDelivery';
 var scnAHDValues = ["ZEROTH ORDER", "2ND ORDER", "3RD ORDER", "SPIRIT LEVELLING"];
 var scnGDA94Value = "ADJUSTMENT";
 var pcmSearchText = "PCM";
@@ -264,14 +265,18 @@ function addMarkers(mapMarkerInf) {
                         '<p>AHD Technique: ' + surveyMark.ahdTechnique + '</p>' +
                         '<hr>' +
                         '<button id="sketch' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--primary mdl-js-ripple-effect fade-in">&nbsp;&nbsp;Sketch&nbsp;&nbsp;</button>&nbsp;&nbsp;&nbsp;' +
-                        '<button id="report' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--primary mdl-js-ripple-effect fade-in">&nbsp;&nbsp;Report&nbsp;&nbsp;</button>',
+                        '<button id="report' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--primary mdl-js-ripple-effect fade-in">&nbsp;&nbsp;Report&nbsp;&nbsp;</button>' +
+                        '<button id="navigate' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--primary mdl-js-ripple-effect fade-in">&nbsp;&nbsp;Navigate&nbsp;&nbsp;</button>',
                     domready: function (e) {
                         document.querySelector("[id=sketch" + surveyMark.nineFigureNumber + "]").addEventListener("click", getSurveyMarkSketch, false);
                         document.querySelector("[id=report" + surveyMark.nineFigureNumber + "]").addEventListener("click", getSurveyMarkReport, false);
+                        document.querySelector("[id=navigate" + surveyMark.nineFigureNumber + "]").addEventListener("click", startNavigation, false);
                     }
                 },
                 click: function (e) {
                     currentNineFigureNumber = surveyMark.nineFigureNumber;
+                    currentLatLng.lat = surveyMark.latitude;
+                    currentLatLng.lng = surveyMark.longitude;
                     console.log("Opening: " + surveyMark.nineFigureNumber);
                 },
             });
@@ -331,6 +336,16 @@ function clearError() {
     errorMsg.classList.add("hidden");
 }
 
+function startNavigation() {
+    clearError();
+
+    if (typeof currentLatLng.lat === "number" && typeof currentLatLng.lng === "number") {
+        window.open("google.navigation:q=" + currentLatLng.lat + "," + currentLatLng.lng);
+    }
+
+
+}
+
 function getSurveyMarkSketch() {
     clearError();
 
@@ -343,6 +358,22 @@ function getSurveyMarkSketch() {
             console.log(err);
             displayError(err);
         });
+
+}
+
+function getSurveyMarkReport() {
+    clearError();
+
+    getSurveyMarkReportResponse(currentNineFigureNumber).then(function (markReportData) {
+
+            saveAs(dataURItoBlob("data:application/pdf;base64," + encodeURI(markReportData.document)), "Survey Mark " + currentNineFigureNumber + " Full Report.pdf");
+
+        })
+        .catch(function (err) {
+            console.log(err);
+            displayError(err);
+        });
+
 
 }
 
