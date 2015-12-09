@@ -304,7 +304,7 @@ function addMarkers(mapMarkerInf) {
         if (loadedMarks.indexOf(surveyMark.nineFigureNumber) === -1) {
 
             if (mobileOS !== "") {
-                navigateString = '<button id="navigate' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color-text--primary smes-button fade-in">&nbsp;&nbsp;Navigate to mark&nbsp;&nbsp;</button><br>';
+                navigateString = '<button id="navigate' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color-text--primary smes-button fade-in">&nbsp;&nbsp;Navigate to mark&nbsp;&nbsp;</button>';
             } else {
                 navigateString = '';
             }
@@ -331,8 +331,8 @@ function addMarkers(mapMarkerInf) {
                         '<p>AHD Technique: ' + surveyMark.ahdTechnique + '</p>' +
                         '<hr>' +
                         navigateString +
-                        '<button id="sketch' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color-text--primary smes-button fade-in">&nbsp;&nbsp;View Mark Sketch&nbsp;&nbsp;</button>&nbsp;&nbsp;&nbsp;<br>' +
-                        '<button id="report' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color-text--primary smes-button fade-in">&nbsp;&nbsp;View Mark Report&nbsp;&nbsp;</button>&nbsp;&nbsp;&nbsp;',
+                        '<button id="sketch' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color-text--primary smes-button fade-in">&nbsp;&nbsp;View Mark Sketch&nbsp;&nbsp;</button>' +
+                        '<button id="report' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color-text--primary smes-button fade-in">&nbsp;&nbsp;View Mark Report&nbsp;&nbsp;</button>',
                     domready: function (e) {
                         document.querySelector("[id=sketch" + surveyMark.nineFigureNumber + "]").addEventListener("click", getSurveyMarkSketch, false);
                         document.querySelector("[id=report" + surveyMark.nineFigureNumber + "]").addEventListener("click", getSurveyMarkReport, false);
