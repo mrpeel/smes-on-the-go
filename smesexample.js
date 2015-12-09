@@ -385,9 +385,13 @@ function isMobile() {
     var userAgent = navigator.userAgent;
 
     if (userAgent.match(/Android/i)) {
+        alert("Android");
         return "Android";
+
     } else if (userAgent.match(/iPhone/i) || userAgent.match(/iPad/i)) {
+        alert("iOS");
         return "iOS";
+
     } else {
         return "";
     }
