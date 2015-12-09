@@ -429,6 +429,7 @@ function startNavigation() {
             navURL = "http://maps.apple.com/?q=" + currentLatLng.lat + "," + currentLatLng.lng;
         }
 
+        alert(navURL);
         window.open(navURL);
 
     }
