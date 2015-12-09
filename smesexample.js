@@ -439,7 +439,7 @@ function startNavigation() {
         if (mobileOS === "Android") {
             navURL = "google.navigation:q=" + currentLatLng.lat + "," + currentLatLng.lng;
         } else {
-            navURL = "http://maps.apple.com/?q=" + currentLatLng.lat + "," + currentLatLng.lng;
+            navURL = "http://maps.apple.com/?daddr=" + currentLatLng.lat + "," + currentLatLng.lng;
         }
 
         window.open(navURL);
