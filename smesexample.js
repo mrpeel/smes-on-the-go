@@ -289,7 +289,7 @@ function addMarkers(mapMarkerInf) {
         if (loadedMarks.indexOf(surveyMark.nineFigureNumber) === -1) {
 
             if (loadMobile === true) {
-                navigateString = '<button id="navigate' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--primary mdl-js-ripple-effect fade-in">&nbsp;&nbsp;Navigate to the mark&nbsp;&nbsp;</button><br>';
+                navigateString = '<button id="navigate' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--primary mdl-js-ripple-effect fade-in">&nbsp;&nbsp;Navigate to mark&nbsp;&nbsp;</button><br>';
             } else {
                 navigateString = '';
             }
