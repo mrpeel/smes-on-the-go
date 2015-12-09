@@ -19,10 +19,11 @@ var zoomInMsg;
 var errorMsg;
 var displayingOverlays = false;
 var redrawQueue = [];
-var maxRequests = 5,
-    perNumberOfSeconds = 30;
-var lastQueueExecuteStartTime = Date.now();
-var loadMobile;
+var maxRequests = 30,
+    perNumberOfSeconds = 60;
+var lastQueueExecuteStartTime;
+var mobileOS;
+var elTimer;
 
 
 //Variables for map data
@@ -33,6 +34,7 @@ var pcmSearchText = "PCM";
 
 window.addEventListener('load', function (e) {
 
+    lastQueueExecuteStartTime = Date.now();
 
     mapSpinner = document.querySelector("[id=map-spinner]");
     zoomInMsg = document.querySelector("[id=zoom-in-msg]");
@@ -51,7 +53,7 @@ window.addEventListener('load', function (e) {
  */
 function createMap() {
 
-    loadMobile = isMobile();
+    mobileOS = isMobile();
 
     map = new GMaps({
         div: '#map',
@@ -62,6 +64,8 @@ function createMap() {
             checkSizeofCurrentMap();
         },
         idle: function (e) {
+            //elTimer = new Date();
+            //console.log('Start redraw process: ' + elTimer);
             queueRedraw();
         }
 
@@ -90,7 +94,7 @@ function geoLocate() {
  */
 function queueRedraw() {
 
-    //console.log('Adding to queue: ' + Date.now());
+    //console.log('Adding to queue elapsed ms: ' + (Date.now() - elTimer));
     redrawQueue.push(Date.now());
     processQueue();
 
@@ -106,10 +110,12 @@ function processQueue() {
 
     if (redrawQueue.length > 0) {
         if (elapsed >= inc) {
-            //console.log('Executing: ' + Date.now());
+            //console.log('Executing elapsed ms: ' + (Date.now() - elTimer));
             executeRedrawFromQueue();
         } else {
-            //console.log('Waiting: ' + Date.now());
+            //console.log('Waiting elapsed ms: ' + (Date.now() - elTimer));
+            //console.log('Queue elapsed: ' + elapsed);
+            //console.log('Queue inc: ' + inc);
             window.setTimeout(function () {
                 processQueue();
                 //Reschedule for difference between current date time and expected date time for next execution - add 50 ms to allow for execution time
@@ -142,6 +148,9 @@ function redrawMapInfo() {
     var markInf;
     var coords = {};
 
+    //console.log('Starting redraw elapsed ms: ' + (Date.now() - elTimer));
+
+    mapSpinner.classList.remove("hidden");
 
     coords.lat = map.getCenter().lat();
     coords.lng = map.getCenter().lng();
@@ -166,8 +175,8 @@ function redrawMapInfo() {
                     //Draw markers if value returned
                     addMarkers(markInf);
                 }
-
                 mapSpinner.classList.add("hidden");
+                //console.log('Finished redraw (successful) elapsed ms: ' + (Date.now() - elTimer));
 
             })
             .catch(function (err) {
@@ -175,6 +184,10 @@ function redrawMapInfo() {
                 console.log(err);
             });
 
+    } else {
+
+        mapSpinner.classList.add("hidden");
+        //console.log('Finished redraw (too big) elapsed ms: ' + (Date.now() - elTimer));
     }
 
 
@@ -290,8 +303,8 @@ function addMarkers(mapMarkerInf) {
         //check if this mark has been loaded
         if (loadedMarks.indexOf(surveyMark.nineFigureNumber) === -1) {
 
-            if (loadMobile !== "") {
-                navigateString = '<button id="navigate' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--primary mdl-js-ripple-effect fade-in">&nbsp;&nbsp;Navigate to mark&nbsp;&nbsp;</button><br>';
+            if (mobileOS !== "") {
+                navigateString = '<button id="navigate' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect fade-in">&nbsp;&nbsp;Navigate to mark&nbsp;&nbsp;</button><br>';
             } else {
                 navigateString = '';
             }
@@ -318,12 +331,12 @@ function addMarkers(mapMarkerInf) {
                         '<p>AHD Technique: ' + surveyMark.ahdTechnique + '</p>' +
                         '<hr>' +
                         navigateString +
-                        '<button id="sketch' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--primary mdl-js-ripple-effect fade-in">&nbsp;&nbsp;View Mark Sketch&nbsp;&nbsp;</button>&nbsp;&nbsp;&nbsp;<br>' +
-                        '<button id="report' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--primary mdl-js-ripple-effect fade-in">&nbsp;&nbsp;View Mark Report&nbsp;&nbsp;</button>&nbsp;&nbsp;&nbsp;',
+                        '<button id="sketch' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color-text--primary smes-button fade-in">&nbsp;&nbsp;View Mark Sketch&nbsp;&nbsp;</button>&nbsp;&nbsp;&nbsp;<br>' +
+                        '<button id="report' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color-text--primary smes-button fade-in">&nbsp;&nbsp;View Mark Report&nbsp;&nbsp;</button>&nbsp;&nbsp;&nbsp;',
                     domready: function (e) {
                         document.querySelector("[id=sketch" + surveyMark.nineFigureNumber + "]").addEventListener("click", getSurveyMarkSketch, false);
                         document.querySelector("[id=report" + surveyMark.nineFigureNumber + "]").addEventListener("click", getSurveyMarkReport, false);
-                        if (loadMobile === true) {
+                        if (mobileOS !== "") {
                             document.querySelector("[id=navigate" + surveyMark.nineFigureNumber + "]").addEventListener("click", startNavigation, false);
                         }
                     }
@@ -420,10 +433,10 @@ function clearError() {
 function startNavigation() {
     clearError();
 
-    if (typeof currentLatLng.lat === "number" && typeof currentLatLng.lng === "number") {
+    if (typeof currentLatLng.lat === "number" && typeof currentLatLng.lng === "number" && mobileOS !== "") {
         var navURL;
 
-        if (loadMobile === "Android") {
+        if (mobileOS === "Android") {
             navURL = "google.navigation:q=" + currentLatLng.lat + "," + currentLatLng.lng;
         } else {
             navURL = "http://maps.apple.com/?q=" + currentLatLng.lat + "," + currentLatLng.lng;
@@ -605,6 +618,7 @@ function getSurveyMarkReportResponse(nineFigureNumber) {
  */
 function checkSizeofCurrentMap() {
 
+    mapSpinner.classList.remove("hidden");
 
     var mapBounds = map.getBounds();
     //console.log(mapBounds);
@@ -626,6 +640,8 @@ function checkSizeofCurrentMap() {
         zoomInMsg.textContent = "Zoom in to see marks";
         zoomInMsg.classList.remove("hidden");
     }
+
+    mapSpinner.classList.add("hidden");
 }
 
 /**

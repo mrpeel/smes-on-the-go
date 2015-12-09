@@ -11,6 +11,13 @@ body {
     /*height: 650px;*/
     height: calc(100vh - 100px);
 }
+.smes-button {
+    width: 95%;
+    margin-bottom: 10px;
+}
+.smes-button.mdl-button--raised {
+    background-color: rgba(158, 158, 158, 0.05);
+}
 .map-center {
     position: absolute;
     top: calc((100vh / 2) - 50px);
