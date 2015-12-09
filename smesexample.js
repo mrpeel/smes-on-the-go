@@ -33,7 +33,7 @@ var pcmSearchText = "PCM";
 
 window.addEventListener('load', function (e) {
 
-    loadMobile = isMobile();
+
     mapSpinner = document.querySelector("[id=map-spinner]");
     zoomInMsg = document.querySelector("[id=zoom-in-msg]");
     errorMsg = document.querySelector("[id=error-msg]");
@@ -50,6 +50,8 @@ window.addEventListener('load', function (e) {
  * Create the map object and set its default attributes / operations.
  */
 function createMap() {
+
+    loadMobile = isMobile();
 
     map = new GMaps({
         div: '#map',
@@ -385,13 +387,9 @@ function isMobile() {
     var userAgent = navigator.userAgent;
 
     if (userAgent.match(/Android/i)) {
-        alert("Android");
         return "Android";
-
     } else if (userAgent.match(/iPhone/i) || userAgent.match(/iPad/i)) {
-        alert("iOS");
         return "iOS";
-
     } else {
         return "";
     }
@@ -428,7 +426,7 @@ function startNavigation() {
         if (loadMobile === "Android") {
             navURL = "google.navigation:q=" + currentLatLng.lat + "," + currentLatLng.lng;
         } else {
-            navURL = "http: //maps.apple.com/?q=" + currentLatLng.lat + "," + currentLatLng.lng;
+            navURL = "http://maps.apple.com/?q=" + currentLatLng.lat + "," + currentLatLng.lng;
         }
 
         window.open(navURL);
