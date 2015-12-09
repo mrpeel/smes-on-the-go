@@ -1,6 +1,6 @@
 /** Set up global types so JSHint doesn't trigger warnings that they are not defined */
 
-/*global xr, GMaps, Promise, setTimeout, window, document, console, alert, ArrayBuffer, Uint8Array, Blob, saveAs, darkGrey, coolGrey, paleDawn, shiftWorker, simpleLight, muted, iovation */
+/*global xr, GMaps, Promise, setTimeout, window, document, console, alert, ArrayBuffer, Uint8Array, Blob, saveAs, darkGrey, coolGrey, paleDawn, shiftWorker, simpleLight, muted, iovation, navigator */
 
 //global map variable
 var map;
@@ -18,11 +18,14 @@ var locateButton;
 var zoomInMsg;
 var errorMsg;
 var displayingOverlays = false;
-var nextMapMove = Date.now();
-var timeOut;
+var redrawQueue = [];
+var maxRequests = 5,
+    perNumberOfSeconds = 30;
+var lastQueueExecuteStartTime = Date.now();
+var loadMobile;
 
 
-//Varibales for map data
+//Variables for map data
 var baseURL = 'https://maps.land.vic.gov.au/lvis/services/smesDataDelivery';
 var scnAHDValues = ["ZEROTH ORDER", "2ND ORDER", "3RD ORDER", "SPIRIT LEVELLING"];
 var scnGDA94Value = "ADJUSTMENT";
@@ -30,6 +33,7 @@ var pcmSearchText = "PCM";
 
 window.addEventListener('load', function (e) {
 
+    loadMobile = isMobile();
     mapSpinner = document.querySelector("[id=map-spinner]");
     zoomInMsg = document.querySelector("[id=zoom-in-msg]");
     errorMsg = document.querySelector("[id=error-msg]");
@@ -42,7 +46,9 @@ window.addEventListener('load', function (e) {
 
 }, false);
 
-
+/**
+ * Create the map object and set its default attributes / operations.
+ */
 function createMap() {
 
     map = new GMaps({
@@ -54,13 +60,16 @@ function createMap() {
             checkSizeofCurrentMap();
         },
         idle: function (e) {
-            mapMoved();
+            queueRedraw();
         }
 
     });
 
 }
 
+/**
+ * Get the browser's current location.
+ */
 function geoLocate() {
 
     GMaps.geolocate({
@@ -70,36 +79,63 @@ function geoLocate() {
     });
 
     checkSizeofCurrentMap();
-    mapMoved();
+    queueRedraw();
 
 }
 
-
-/* Calls the redrawMapInfo function  at most once per 2000 milliseconds.
- * The function will execute on both the leading and trailing edge
- * Relies on a global variable to track the time period 
+/**
+ * Queue the redraw request and begin the process operation.
  */
-function mapMoved() {
-    //var timeout,
-    var immediate = false,
-        wait = 1000;
+function queueRedraw() {
 
-    console.log(Date.now() + ": map moved");
+    //console.log('Adding to queue: ' + Date.now());
+    redrawQueue.push(Date.now());
+    processQueue();
 
-    if (Date.now() >= nextMapMove && !timeOut) {
-        nextMapMove = Date.now() + wait;
-        redrawMapInfo();
-    } else {
-        window.clearTimeout(timeOut);
-        timeOut = window.setTimeout(function () {
-            redrawMapInfo();
-            timeOut = null;
-        }, wait);
+}
+
+/**
+ * Process the redraw operation queue.
+ */
+function processQueue() {
+
+    var inc = (perNumberOfSeconds / maxRequests) * 1000;
+    var elapsed = Date.now() - lastQueueExecuteStartTime;
+
+    if (redrawQueue.length > 0) {
+        if (elapsed >= inc) {
+            //console.log('Executing: ' + Date.now());
+            executeRedrawFromQueue();
+        } else {
+            //console.log('Waiting: ' + Date.now());
+            window.setTimeout(function () {
+                processQueue();
+                //Reschedule for difference between current date time and expected date time for next execution - add 50 ms to allow for execution time
+            }, inc - elapsed + 50);
+        }
+
     }
 
 }
 
+/**
+ * Execute the redraw operation from the queue, and clear the queue.
+ */
+function executeRedrawFromQueue() {
 
+    if (redrawQueue.length > 0) {
+        //Set last execution time stamp
+        lastQueueExecuteStartTime = Date.now();
+        //truncate queue - to remove all pending requests
+        redrawQueue.length = 0;
+        //redraw map
+        redrawMapInfo();
+    }
+}
+
+/**
+ * Redraw the map at the current location.  Call the retrieveMarkInformation and draw markers as appropriate.
+ */
 function redrawMapInfo() {
     var markInf;
     var coords = {};
@@ -142,7 +178,11 @@ function redrawMapInfo() {
 
 }
 
-
+/**
+ * Determines what type of mark symbol should be used to display a specific mark.
+ * @param {object} surveyMark - the data structure with the information for the specific mark
+ * @return {string} - the symbol name to be used
+ */
 function returnMarkerIconType(surveyMark) {
     var isSCN, isPCM, hasAHD, isSCNGDA94, isSCNAHD;
 
@@ -203,6 +243,10 @@ function returnMarkerIconType(surveyMark) {
 
 }
 
+/**
+ * Draw markers for the marks retrieved from getMarkInformation to the map.
+ * @param {object} mapMarkerInf - the data structure with the mark information
+ */
 function addMarkers(mapMarkerInf) {
 
     var markerIcon, markerSize, zoomLevel;
@@ -236,12 +280,19 @@ function addMarkers(mapMarkerInf) {
     mapMarkerInf.forEach(function (surveyMark) {
         //Determine correct icon type
         var iconType = returnMarkerIconType(surveyMark);
+        var navigateString;
 
         //Set icon file based on type and size
         markerIcon = "symbology/" + iconType + "-" + markerSize + ".png";
 
         //check if this mark has been loaded
         if (loadedMarks.indexOf(surveyMark.nineFigureNumber) === -1) {
+
+            if (loadMobile === true) {
+                navigateString = '<button id="navigate' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--primary mdl-js-ripple-effect fade-in">&nbsp;&nbsp;Navigate to the mark&nbsp;&nbsp;</button><br>';
+            } else {
+                navigateString = '';
+            }
 
             map.addMarker({
                 lat: surveyMark.latitude,
@@ -264,20 +315,22 @@ function addMarkers(mapMarkerInf) {
                         '<p>GDA94 Technique: ' + surveyMark.gda94Technique + '</p>' +
                         '<p>AHD Technique: ' + surveyMark.ahdTechnique + '</p>' +
                         '<hr>' +
-                        '<button id="sketch' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--primary mdl-js-ripple-effect fade-in">&nbsp;&nbsp;Sketch&nbsp;&nbsp;</button>&nbsp;&nbsp;&nbsp;<p>' +
-                        '<button id="report' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--primary mdl-js-ripple-effect fade-in">&nbsp;&nbsp;Report&nbsp;&nbsp;</button><p>' +
-                        '<button id="navigate' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--primary mdl-js-ripple-effect fade-in">&nbsp;&nbsp;Navigate&nbsp;&nbsp;</button>',
+                        navigateString +
+                        '<button id="sketch' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--primary mdl-js-ripple-effect fade-in">&nbsp;&nbsp;View Mark Sketch&nbsp;&nbsp;</button>&nbsp;&nbsp;&nbsp;<br>' +
+                        '<button id="report' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--primary mdl-js-ripple-effect fade-in">&nbsp;&nbsp;View Mark Report&nbsp;&nbsp;</button>&nbsp;&nbsp;&nbsp;',
                     domready: function (e) {
                         document.querySelector("[id=sketch" + surveyMark.nineFigureNumber + "]").addEventListener("click", getSurveyMarkSketch, false);
                         document.querySelector("[id=report" + surveyMark.nineFigureNumber + "]").addEventListener("click", getSurveyMarkReport, false);
-                        document.querySelector("[id=navigate" + surveyMark.nineFigureNumber + "]").addEventListener("click", startNavigation, false);
+                        if (loadMobile === true) {
+                            document.querySelector("[id=navigate" + surveyMark.nineFigureNumber + "]").addEventListener("click", startNavigation, false);
+                        }
                     }
                 },
                 click: function (e) {
                     currentNineFigureNumber = surveyMark.nineFigureNumber;
                     currentLatLng.lat = surveyMark.latitude;
                     currentLatLng.lng = surveyMark.longitude;
-                    console.log("Opening: " + surveyMark.nineFigureNumber);
+                    //console.log("Opening: " + surveyMark.nineFigureNumber);
                 },
             });
 
@@ -323,7 +376,24 @@ function addMarkers(mapMarkerInf) {
 
 }
 
+/**
+ * Attempt to detect the page being used ona  mobile device.
+ * @return {boolean} whether the current browser isd being used on an Android / iOS mobile device
+ */
+function isMobile() {
 
+    var userAgent = navigator.userAgent;
+
+    if (userAgent.match(/Android/i) || userAgent.match(/iPhone/i) || userAgent.match(/iPad/i)) {
+        return true;
+    } else {
+        return false;
+    }
+
+}
+/**
+ * Display the error message on the screen with the default text
+ */
 function displayError() {
     errorMsg.classList.remove("hidden");
     errorMsg.textContent = "Too many requests have been sent to the server.  Please wait...";
@@ -332,9 +402,16 @@ function displayError() {
     }, 1000);
 }
 
+/**
+ * Hide the error message from the screen
+ */
 function clearError() {
     errorMsg.classList.add("hidden");
 }
+
+/**
+ * Attempt to open Google amps and start navigation to the currently selected mark's coordinates
+ */
 
 function startNavigation() {
     clearError();
@@ -346,12 +423,16 @@ function startNavigation() {
 
 }
 
+/**
+ * Call the getSurveyMarkSketchResponse function and open a new tab with the PDF result.  Use the currently selected nine figure number
+ */
 function getSurveyMarkSketch() {
     clearError();
 
     getSurveyMarkSketchResponse(currentNineFigureNumber).then(function (markSketchData) {
 
-            saveAs(dataURItoBlob("data:application/pdf;base64," + encodeURI(markSketchData.document)), "Survey Mark " + currentNineFigureNumber + " Sketch Report.pdf");
+            window.open("data:application/pdf;base64," + encodeURI(markSketchData.document), "_blank");
+            //saveAs(dataURItoBlob("data:application/pdf;base64," + encodeURI(markSketchData.document)), "Survey Mark " + currentNineFigureNumber + " Sketch Report.pdf");
 
         })
         .catch(function (err) {
@@ -360,13 +441,16 @@ function getSurveyMarkSketch() {
         });
 
 }
-
+/**
+ * Call the getSurveyMarkReportResponse function and open a new tab with the PDF result.  Use the currently selected nine figure number
+ */
 function getSurveyMarkReport() {
     clearError();
 
     getSurveyMarkReportResponse(currentNineFigureNumber).then(function (markReportData) {
 
-            saveAs(dataURItoBlob("data:application/pdf;base64," + encodeURI(markReportData.document)), "Survey Mark " + currentNineFigureNumber + " Full Report.pdf");
+            window.open("data:application/pdf;base64," + encodeURI(markReportData.document), "_blank");
+            //saveAs(dataURItoBlob("data:application/pdf;base64," + encodeURI(markReportData.document)), "Survey Mark " + currentNineFigureNumber + " Full Report.pdf");
 
         })
         .catch(function (err) {
@@ -377,23 +461,11 @@ function getSurveyMarkReport() {
 
 }
 
-function getSurveyMarkReport() {
-    clearError();
-
-    getSurveyMarkReportResponse(currentNineFigureNumber).then(function (markReportData) {
-
-            saveAs(dataURItoBlob("data:application/pdf;base64," + encodeURI(markReportData.document)), "Survey Mark " + currentNineFigureNumber + " Full Report.pdf");
-
-        })
-        .catch(function (err) {
-            console.log(err);
-            displayError(err);
-        });
-
-
-}
-
-
+/**
+ * Call the getMarkInfornmation web service.  This is being called using for a specific mark using its Nine Figure Number
+ * @param {number} cLat, cLong - the coordinates for the center of the radius to search in
+ * @return {promise} a promise which will resolve a data structure which contains the mark information 
+ */
 function retrieveMarkInformation(cLat, cLong) {
     clearError();
 
@@ -449,6 +521,12 @@ function retrieveMarkInformation(cLat, cLong) {
 
 }
 
+/**
+ * Call the getSurveyMarSketches web service.  This is being called for a specific mark using its Nine Figure Number.
+ * @param {string} nineFigureNumber - the mark's Ninem Figure Number
+ * @return {promise} a promise which will resolve a data structure which contains the base64 encoded PDF 
+ */
+
 function getSurveyMarkSketchResponse(nineFigureNumber) {
 
     return new Promise(function (resolve, reject) {
@@ -477,6 +555,11 @@ function getSurveyMarkSketchResponse(nineFigureNumber) {
     });
 }
 
+/**
+ * Call the getSurveyMarkReports web service.  This is being called for a specific mark using its Nine Figure Number
+ * @param {string} nineFigureNumber - the mark's Nine Figure Number
+ * @return {promise} a promise which will resolve a data structure which contains the base64 encoded PDF 
+ */
 function getSurveyMarkReportResponse(nineFigureNumber) {
 
     return new Promise(function (resolve, reject) {
@@ -504,11 +587,16 @@ function getSurveyMarkReportResponse(nineFigureNumber) {
     });
 }
 
+/**
+ * Check to see whether the map is zoomed to 2km "radius" or less.  Radius is determined by measuring from the centre point to the wouth west corner of the map
+ */
 function checkSizeofCurrentMap() {
+
+
     var mapBounds = map.getBounds();
     //console.log(mapBounds);
     //console.log(centreCoords);
-    console.log(Date.now() + ": zoom changed");
+    //console.log(Date.now() + ": zoom changed");
 
     if (typeof mapBounds !== 'undefined') {
         var mapRadius = getDistanceKms(map.getCenter().lat(), map.getCenter().lng(), map.getBounds().getSouthWest().lat(), map.getBounds().getSouthWest().lng());
@@ -527,6 +615,10 @@ function checkSizeofCurrentMap() {
     }
 }
 
+/**
+ * Calculate the distance between two points in kilometres
+ * @params {number} - coordinate values in latitude and longitude for the two points
+ */
 function getDistanceKms(point1Lat, point1Lng, point2Lat, point2Lng) {
     var R = 6378137; // Earth’s mean radius
     var dLat = calcRad(point2Lat - point1Lat);
@@ -540,6 +632,10 @@ function getDistanceKms(point1Lat, point1Lng, point2Lat, point2Lng) {
     return d; // returns the distance in metres
 }
 
+/**
+ * Calculate radians for a given value
+ * @params {number} x - the input value
+ */
 function calcRad(x) {
     return x * Math.PI / 180;
 }
