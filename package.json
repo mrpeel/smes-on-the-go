@@ -1,0 +1,12 @@
+{
+    "name": "smes-on-the-go",
+    "description": "Mobile web app for Victorian accessing survey mark data on Google Maps",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/mrpeel/smes-on-the-go.git"
+    },
+    "devDependencies": {
+        "gulp": "^3.9.0",
+        \
+    }
+}
