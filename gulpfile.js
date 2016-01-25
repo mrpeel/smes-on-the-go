@@ -39,7 +39,7 @@ gulp.task('appcachetimestamp', function () {
 /* Build the javascript - concatenates and minifies the files required to run.
  */
 gulp.task('buildjs', ['appcachetimestamp'], function () {
-    gulp.src(['src/*.js'])
+    gulp.src(['src/map-styles.js', 'src/smes.js', 'src/places-autocomplete.js'])
         .pipe(concat('smes-on-the-go.js'))
         .pipe(gulp.dest('build/'))
         .pipe(rename('smes-on-the-go.min.js'))
@@ -126,7 +126,7 @@ gulp.task('copylibfiles', ['disthtml'], function () {
 /* Copy symbology files to the build and dist directories.
  */
 gulp.task('copysymbology', ['copylibfiles'], function () {
-    gulp.src(['src/symbology'])
+    gulp.src(['src/symbology/*.png'])
         .pipe(gulp.dest('build/'))
         .pipe(gulp.dest('dist/'));
 });

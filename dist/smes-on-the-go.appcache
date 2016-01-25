@@ -1,0 +1,17 @@
+CACHE MANIFEST
+# 1453685509383
+# Use cache for material design files and promise polyfill
+
+CACHE:
+favicon.png
+favicon.ico
+favicon-192.png
+favicon-152.png
+favicon-144.png
+opensesame.min.css
+opensesame.min.js
+
+NETWORK:
+*
+http://*
+https://*
