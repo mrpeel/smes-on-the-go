@@ -12,6 +12,7 @@ var SMESMarkStore = function () {
     this.baseURL = 'https://maps.land.vic.gov.au/lvis/services/smesDataDelivery';
     this.updateIndex = [];
     this.newIndex = [];
+    this.tooManyMarks = false;
 
     if (this.useLocalStore) {
         this.retrieveStoredMarks();
@@ -211,12 +212,14 @@ SMESMarkStore.prototype.requestMarkInformation = function (cLat, cLong, cRadius,
                 if (marksRetrieved) {
                     self.processRetrievedMarks(marksRetrieved).then(function () {
                         console.log("Executing callback");
+                        self.tooManyMarks = false;
                         callback.apply(this);
                     });
 
                 }
             }).catch(function (err) {
                 if (err === "Too many marks") {
+                    self.tooManyMarks = true;
                     tooManyCallback.apply(this);
                 }
                 console.log(err);
@@ -1795,9 +1798,6 @@ function setupMap() {
 
     loadMarks();
 
-    if (!markStore.useLocalStore) {
-        zoomInMsg.innerHTML = '<span class="zoom-in-message-text">Zoom to display marks</span>';
-    }
 
     displayZoomMessage();
 
@@ -1829,7 +1829,16 @@ function requestMarkInformation() {
 
 function displayZoomMessage() {
 
-    if (!smesMap.mapSize || smesMap.mapSize > 2) {
+    var currentZoom = smesMap.getZoom();
+
+    if (markStore.useLocalStore && currentZoom >= 14) {
+        zoomInMsg.innerHTML = '<span class="zoom-in-message-text">Displaying cached marks - zoom to refresh</span>';
+    } else {
+        zoomInMsg.innerHTML = '<span class="zoom-in-message-text">Zoom to display marks</span>';
+    }
+
+
+    if (!smesMap.mapSize || smesMap.mapSize > 2 || currentZoom < 14 || markStore.tooManyMarks) {
         zoomInMsg.classList.remove("hidden");
     } else {
         zoomInMsg.classList.add("hidden");
@@ -1949,6 +1958,7 @@ function loadMarks() {
 
     //Call the zoom level to show / hide marks and labels as required
     smesMap.setZoomLevel();
+    displayZoomMessage();
 }
 
 function markClickHandler(nineFigureNumber, lat, lng) {

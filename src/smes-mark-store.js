@@ -12,6 +12,7 @@ var SMESMarkStore = function () {
     this.baseURL = 'https://maps.land.vic.gov.au/lvis/services/smesDataDelivery';
     this.updateIndex = [];
     this.newIndex = [];
+    this.tooManyMarks = false;
 
     if (this.useLocalStore) {
         this.retrieveStoredMarks();
@@ -211,12 +212,14 @@ SMESMarkStore.prototype.requestMarkInformation = function (cLat, cLong, cRadius,
                 if (marksRetrieved) {
                     self.processRetrievedMarks(marksRetrieved).then(function () {
                         console.log("Executing callback");
+                        self.tooManyMarks = false;
                         callback.apply(this);
                     });
 
                 }
             }).catch(function (err) {
                 if (err === "Too many marks") {
+                    self.tooManyMarks = true;
                     tooManyCallback.apply(this);
                 }
                 console.log(err);
