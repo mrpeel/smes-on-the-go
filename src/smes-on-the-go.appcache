@@ -8,8 +8,10 @@ favicon.ico
 favicon-192.png
 favicon-152.png
 favicon-144.png
-opensesame.min.css
-opensesame.min.js
+*.svg
+smes-on-the-go.min.css
+smes-on-the-go.min.js
+sotg-lib.js
 
 NETWORK:
 *

@@ -22,7 +22,6 @@
 
 <body>
 
-
     <div class="mdl-layout mdl-js-layout">
         <!--<header class="mdl-layout__header mdl-layout__header--transparent">
             <div class="mdl-layout__header-row">
@@ -34,11 +33,8 @@
             <span class="mdl-layout-title">SMES On The Go</span>
             <nav class="mdl-navigation">
                 <div>
-                    <span class="">Cache mark information
-</span>
-                    <br>
-                    <span class="">Retain mark information for 7 days
-</span>
+                    <div class="">Cache mark information</div>
+                    <div class="">Retain mark information for 7 days</div>
                 </div><span>Map style</span>
                 <span>Cool grey</span>
                 <div>
@@ -46,42 +42,45 @@
             </nav>
         </div>
 
-        <!--<main class="mdl-layout__content mdl-color--grey-200">
-            <div id="page-content" class="page-content">-->
         <main>
             <div id="page-content">
 
 
                 <!--<div class="mdl-grid">
                     <div class="mdl-card mdl-cell mdl-cell--12-col mdl-shadow--3dp map-card">-->
-                <div class="controls mdl-cell--6-col">
-                    <button id="hamburger-menu" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--icon">
-                        <i class="material-icons">menu</i>
-                    </button>
-                    <input id="pac-input" class="" type="text" placeholder="Enter a location">
-                    <!--<button id="locate" class="location mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--icon">-->
-                    <button id="locate" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--icon">
-                        <i class="material-icons">my_location</i>
-                    </button>
-                </div>
                 <div id="map-container" class="map-container">
                     <div id="map" class="smes-map"></div>
                 </div>
-                <div id="map-spinner" class="mdl-spinner mdl-js-spinner is-active map-center hidden"></div>
-                <div id="zoom-in-msg" class="zoom-in-message hidden"><span class="zoom-in-message-text">Zoom in to see marks</span></div>
-                <div id="error-msg" class="error-message hidden"><span class="error-message-text">Too many requests have been sent to the server.  Please wait...</span></div>
+                <div class="search-box mdl-shadow--3dp mdl-cell--4-col mdl-color--white">
+                    <div class="controls">
+                        <div class="search-icon">
+                            <button id="hamburger-menu" class="search-icon mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--icon">
+                                <i class="material-icons">menu</i>
+                            </button>
+                        </div>
+                        <input id="location-search" class="" type="text" placeholder="Search for address / location" />
+                        <div id="clear-search-div" class="hidden search-icon">
+                            <button id="clear-search" class="mdl-button mdl-js-button mdl-button--icon">
+                                <i class="material-icons">close</i>
+                            </button>
 
+                        </div>
+                        <div class="divider">|</div>
+                        <div class="search-icon">
+                            <button id="locate" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--icon">
+                                <i class="material-icons">my_location</i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="map-spinner" class="mdl-spinner mdl-js-spinner is-active map-center hidden"></div>
+                <div id="zoom-in-msg" class="zoom-in-message hidden"><span class="zoom-in-message-text">Displaying cached marks - zoom to refresh</span></div>
 
             </div>
 
-
-
-
-            <!--</div>
-            </div>-->
         </main>
     </div>
-
 
     <script>
         // If Promise is not supported, include the polyfill
@@ -91,9 +90,8 @@
 
     <script src="https://storage.googleapis.com/code.getmdl.io/1.0.6/material.min.js"></script>
     <script src="https://maps.google.com/maps/api/js?key=AIzaSyC2nLsr9KX6pMcwmYH-LY-JqVwByPmaTfM&libraries=places"></script>
-    <script src="sotg-lib.js"></script>
+    <script src="sotg-lib.min.js"></script>
     <script src="@@jsfile"></script>
-
 
 </body>
 

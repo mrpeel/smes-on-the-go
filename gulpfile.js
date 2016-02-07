@@ -9,6 +9,7 @@ var nano = require('gulp-cssnano');
 var connect = require('gulp-connect');
 var gutil = require('gulp-util');
 var ghPages = require('gulp-gh-pages');
+var debug = require('gulp-debug');
 
 
 /* Use a dependency chain to build in the correct order - starting with the final task.
@@ -39,7 +40,7 @@ gulp.task('appcachetimestamp', function () {
 /* Build the javascript - concatenates and minifies the files required to run.
  */
 gulp.task('buildjs', ['appcachetimestamp'], function () {
-    gulp.src(['src/map-styles.js', 'src/smes.js', 'src/places-autocomplete.js'])
+    gulp.src(['src/smes-mark-store.js', 'src/smes-map.js', 'src/smes.js'])
         .pipe(concat('smes-on-the-go.js'))
         .pipe(gulp.dest('build/'))
         .pipe(rename('smes-on-the-go.min.js'))
@@ -111,8 +112,8 @@ gulp.task('disthtml', ['buildhtml'], function () {
 /* Copy all the library files to the build and dist directories.
  */
 gulp.task('copylibfiles', ['disthtml'], function () {
-    gulp.src(['lib/gmaps.min.js', 'lib/xr.js'])
-        .pipe(concat('sotg-lib.js'))
+    gulp.src(['lib/sotg-lib.js'])
+        .pipe(rename('sotg-lib.min.js'))
         .pipe(uglify()).on('error', gutil.log)
         .pipe(gulp.dest('build/'))
         .pipe(gulp.dest('dist/'));
@@ -126,9 +127,10 @@ gulp.task('copylibfiles', ['disthtml'], function () {
 /* Copy symbology files to the build and dist directories.
  */
 gulp.task('copysymbology', ['copylibfiles'], function () {
-    gulp.src(['src/symbology/*.png'])
-        .pipe(gulp.dest('build/'))
-        .pipe(gulp.dest('dist/'));
+    gulp.src(['src/symbology/*.svg'])
+        .pipe(debug())
+        .pipe(gulp.dest('build/symbology'))
+        .pipe(gulp.dest('dist/symbology'));
 });
 
 
@@ -136,6 +138,7 @@ gulp.task('copysymbology', ['copylibfiles'], function () {
  */
 gulp.task('copyfavicon', ['copysymbology'], function () {
     gulp.src(['src/favicon.*'])
+        .pipe(debug())
         .pipe(gulp.dest('build/'))
         .pipe(gulp.dest('dist/'));
 });

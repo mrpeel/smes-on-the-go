@@ -1,88 +1,70 @@
-/** Set up global types so JSHint doesn't trigger warnings that they are not defined */
+/*global xr, SMESGMap, SMESMarkStore, Promise, setTimeout, window, document, console, alert, ArrayBuffer, Uint8Array, Blob, saveAs, darkGrey, coolGrey, paleDawn, shiftWorker, simpleLight, muted, iovation, navigator, google, SMESMap, MarkStore */
 
-/*global xr, GMaps, Promise, setTimeout, window, document, console, alert, ArrayBuffer, Uint8Array, Blob, saveAs, darkGrey, coolGrey, paleDawn, shiftWorker, simpleLight, muted, iovation, navigator, google */
-
-//global map variable
-var map;
-
-var input, searchMarker, autoComplete, infoWindow;
-
-
-//variable to hold running data
-var currentNineFigureNumber;
-var currentLatLng = {};
-var currentRadius;
-var loadedMarks = [];
-var loadedOverlays = [];
 
 //Variables for display
 var mapSpinner;
 var locateButton;
 var zoomInMsg;
 var errorMsg;
-var displayingOverlays = false;
-var redrawQueue = [];
-var maxRequests = 30,
-    perNumberOfSeconds = 60;
-var lastQueueExecuteStartTime;
 var mobileOS;
 var elTimer;
 
-//Variables for map data
-var baseURL = 'https://maps.land.vic.gov.au/lvis/services/smesDataDelivery';
+var smesMap;
+var markStore;
 var scnAHDValues = ["ZEROTH ORDER", "2ND ORDER", "3RD ORDER", "SPIRIT LEVELLING"];
 var scnGDA94Value = "ADJUSTMENT";
 var pcmSearchText = "PCM";
+var currentNineFigureNumber;
+var currentLatLng = {};
+var currentRadius;
 
-var ZOOM_MSG_TEXT = '<span class="zoom-in-message-text">Zoom in to see marks</span>';
 
 window.addEventListener('load', function (e) {
-
-    lastQueueExecuteStartTime = Date.now();
 
     mapSpinner = document.querySelector("[id=map-spinner]");
     zoomInMsg = document.querySelector("[id=zoom-in-msg]");
     errorMsg = document.querySelector("[id=error-msg]");
     locateButton = document.querySelector("[id=locate]");
     locateButton.addEventListener("click", geoLocate, false);
-
-    createMap();
-    geoLocate();
-
     document.getElementById("hamburger-menu").addEventListener("click", showDrawer, false);
+    document.getElementById("clear-search").addEventListener("click", clearSearch, false);
+
+    setupMap();
+    geoLocate();
 
 
 }, false);
+
 
 function showDrawer() {
     var layout = document.querySelector('.mdl-layout');
     layout.MaterialLayout.drawerToggleHandler_();
 }
 
-/**
- * Create the map object and set its default attributes / operations.
- */
-function createMap() {
+function clearSearch() {
+    document.getElementById("location-search").value = "";
+    document.getElementById("clear-search-div").classList.add("hidden");
+}
+
+function setupMap() {
+
+    var mapOptions = {};
+    mapOptions.idle = requestMarkInformation;
+    mapOptions.zoomChanged = displayZoomMessage;
+
+    smesMap = new SMESGMap("map", mapOptions);
+    markStore = new SMESMarkStore();
+    smesMap.setUpAutoComplete("location-search", "clear-search-div");
 
     mobileOS = isMobile();
 
-    map = new GMaps({
-        div: '#map',
-        lat: -37.813942,
-        lng: 144.9711861,
-        styles: iovation,
-        zoom_changed: function (e) {
-            checkSizeofCurrentMap();
-        },
-        idle: function (e) {
-            //elTimer = new Date();
-            //console.log('Start redraw process: ' + elTimer);
-            queueRedraw();
-        }
+    loadMarks();
 
-    });
+    if (!markStore.useLocalStore) {
+        zoomInMsg.innerHTML = '<span class="zoom-in-message-text">Zoom to display marks</span>';
+    }
 
-    setUpAutoComplete();
+    displayZoomMessage();
 
 }
 
@@ -91,126 +73,217 @@ function createMap() {
  */
 function geoLocate() {
 
-    GMaps.geolocate({
-        success: function (position) {
-            map.setCenter(position.coords.latitude, position.coords.longitude);
-        }
-    });
-
-    checkSizeofCurrentMap();
-    queueRedraw();
+    smesMap.geoLocate();
 
 }
 
-/**
- * Queue the redraw request and begin the process operation.
- */
-function queueRedraw() {
+function requestMarkInformation() {
 
-    //console.log('Adding to queue elapsed ms: ' + (Date.now() - elTimer));
-    redrawQueue.push(Date.now());
-    processQueue();
+    var mapCenter, radius;
+
+    mapCenter = smesMap.map.getCenter();
+    radius = smesMap.mapSize || 2;
+
+    console.log("requestMarkInformation");
+
+    markStore.requestMarkInformation(mapCenter.lat(), mapCenter.lng(), radius, loadMarks, displayZoomMessage);
+    console.log(markStore.newIndex);
 
 }
 
-/**
- * Process the redraw operation queue.
- */
-function processQueue() {
 
-    var inc = (perNumberOfSeconds / maxRequests) * 1000;
-    var elapsed = Date.now() - lastQueueExecuteStartTime;
+function displayZoomMessage() {
 
-    if (redrawQueue.length > 0) {
-        if (elapsed >= inc) {
-            //console.log('Executing elapsed ms: ' + (Date.now() - elTimer));
-            executeRedrawFromQueue();
+    if (!smesMap.mapSize || smesMap.mapSize > 2) {
+        zoomInMsg.classList.remove("hidden");
+    } else {
+        zoomInMsg.classList.add("hidden");
+    }
+}
+
+function loadMarks() {
+    //Work through the new markers and add to the map, then work through updated markers and update on the map
+    var surveyMark, address, iconName, navigateString, scnDiv, infoWindowContent, contentSDiv, contentMDiv, contentEDiv;
+
+    console.log("loadMarks");
+
+    //Add new marks
+    for (var n = 0; n < markStore.newIndex.length; n++) {
+
+        var eventListeners = {};
+        var marker = {};
+        var label = {};
+
+        surveyMark = markStore.markData[markStore.newIndex[n]].data;
+        address = markStore.markData[markStore.newIndex[n]].address || '';
+        iconName = "symbology/" + returnMarkerIconType(surveyMark);
+
+        if (mobileOS !== "") {
+            navigateString = '<button id="navigate' + surveyMark.nineFigureNumber + '" class="smes-button mdl-button mdl-js-button mdl-js-ripple-effect fade-in">Navigate</button>';
         } else {
-            //console.log('Waiting elapsed ms: ' + (Date.now() - elTimer));
-            //console.log('Queue elapsed: ' + elapsed);
-            //console.log('Queue inc: ' + inc);
-            window.setTimeout(function () {
-                processQueue();
-                //Reschedule for difference between current date time and expected date time for next execution - add 50 ms to allow for execution time
-            }, inc - elapsed + 50);
+            navigateString = '';
         }
 
+        if (surveyMark.scn === "Yes") {
+            scnDiv = "SCN";
+        } else {
+            scnDiv = "Non-SCN";
+        }
+
+        eventListeners.domready = domReadyHandler(surveyMark.nineFigureNumber);
+        eventListeners.click = markClickHandler(surveyMark.nineFigureNumber, parseFloat(surveyMark.latitude), parseFloat(surveyMark.longitude));
+
+        contentSDiv = '<div class="card-content"><div class="card-left">';
+        contentMDiv = '</div><div class="card-value">';
+        contentEDiv = '</div></div>';
+
+        infoWindowContent = '<div class="info-window-header">' +
+            '<div class="section__circle-container mdl-cell mdl-cell--2-col mdl-cell--1-col-phone">' +
+            '<div class="section__circle-container__circle card-symbol"> ' +
+            '<img class="info-symbol" src="' + iconName + '.svg">' +
+            '</div>' +
+            '</div>' +
+            '<div class="section__text mdl-cell mdl-cell--6-col-desktop mdl-cell--4-col-tablet mdl-cell--4-col-phone">' +
+            '<div class="nine-figure">' + surveyMark.nineFigureNumber + '</div>' +
+            '<div class="mark-name">' + surveyMark.name + '</div>' +
+            '<div class="mark-status"><div>' + scnDiv + '</div>' +
+            '</div></div>' +
+            '<div id="address' + surveyMark.nineFigureNumber + '"></div></div>' +
+            contentSDiv + 'AHD height:' + contentMDiv + surveyMark.ahdHeight + contentEDiv +
+            contentSDiv + 'Ellipsoid height:' + contentMDiv + surveyMark.ellipsoidHeight + contentEDiv +
+            contentSDiv + 'GDA94 technique:' + contentMDiv + surveyMark.gda94Technique + contentEDiv +
+            contentSDiv + 'AHD technique:' + contentMDiv + surveyMark.ahdTechnique + contentEDiv +
+            contentSDiv + 'MGA:' + contentMDiv + surveyMark.zone + ', ' + surveyMark.easting + ', ' + surveyMark.northing + contentEDiv +
+            '<div class = "button-section">' +
+            '<button id="sketch' + surveyMark.nineFigureNumber + '" class="smes-button mdl-button mdl-js-button mdl-js-ripple-effect fade-in">Sketch</button>' +
+            '<button id="report' + surveyMark.nineFigureNumber + '" class="smes-button mdl-button mdl-js-button mdl-js-ripple-effect fade-in">Report</button>' +
+            navigateString +
+            '</div>';
+
+
+        marker.lat = surveyMark.latitude;
+        marker.lng = surveyMark.longitude;
+        marker.title = surveyMark.name;
+        marker.icon = iconName;
+        marker.nineFigureNo = surveyMark.nineFigureNumber;
+        marker.eventListeners = eventListeners;
+        marker.infoWindowContent = infoWindowContent;
+
+
+
+        smesMap.addMarker(marker);
+
+        label.lat = surveyMark.latitude;
+        label.lng = surveyMark.longitude;
+        label.label = surveyMark.name;
+        label.nineFigureNo = surveyMark.nineFigureNumber;
+
+        smesMap.addLabel(label);
+
     }
+
+    //Update marks
+    for (var u = 0; u < markStore.updateIndex.length; u++) {
+
+        var uMarker = {};
+        var uLabel = {};
+
+        surveyMark = markStore.markData[markStore.newIndex[u]].data;
+        iconName = returnMarkerIconType(surveyMark);
+
+
+        uMarker.lat = surveyMark.latitude;
+        uMarker.lng = surveyMark.longitude;
+        uMarker.title = surveyMark.name;
+        uMarker.icon = iconName;
+        uMarker.nineFigureNo = surveyMark.nineFigureNumber;
+        uMarker.infoWindowContent = infoWindowContent;
+
+
+        smesMap.updateMarker(uMarker);
+
+
+        uLabel.lat = surveyMark.latitude;
+        uLabel.lng = surveyMark.longitude;
+        uLabel.label = surveyMark.name;
+        uLabel.nineFigureNo = surveyMark.nineFigureNumber;
+
+        smesMap.updateLabel(uLabel);
+
+    }
+
+    //Call the zoom level to show / hide marks and labels as required
+    smesMap.setZoomLevel();
+}
+
+function markClickHandler(nineFigureNumber, lat, lng) {
+    return function () {
+        currentNineFigureNumber = nineFigureNumber;
+        currentLatLng.lat = lat;
+        currentLatLng.lng = lng;
+
+        var addressDiv = document.getElementById("address" + nineFigureNumber);
+        var address = "";
+
+        if (addressDiv) {
+            address = smesMap.returnAddress(currentNineFigureNumber);
+            if (address !== "") {
+                addressDiv.innerHTML = address;
+            } else {
+                smesMap.reverseGeocode(currentLatLng.lat, currentLatLng.lng).then(function (result) {
+                    if (result !== "") {
+                        //Find address div if it is still on the screen by the time the address returns;
+
+                        addressDiv.innerHTML = result;
+
+                        markStore.updateAddress(currentNineFigureNumber, result);
+
+                    }
+                });
+
+            }
+        }
+
+
+        console.log(nineFigureNumber);
+    };
 
 }
 
-/**
- * Execute the redraw operation from the queue, and clear the queue.
- */
-function executeRedrawFromQueue() {
+function domReadyHandler(nineFigureNumber) {
+    return function () {
+        document.querySelector("[id=sketch" + nineFigureNumber + "]").addEventListener("click", function () {
+            console.log('Sketch: ' + nineFigureNumber);
 
-    if (redrawQueue.length > 0) {
-        //Set last execution time stamp
-        lastQueueExecuteStartTime = Date.now();
-        //truncate queue - to remove all pending requests
-        redrawQueue.length = 0;
-        //redraw map
-        redrawMapInfo();
-    }
-}
+            markStore.getSurveyMarkSketchResponse(nineFigureNumber).then(function (pdfData) {
+                var blob = markStore.base64toBlob(pdfData.document, 'application/pdf');
 
-/**
- * Redraw the map at the current location.  Call the retrieveMarkInformation and draw markers as appropriate.
- */
-function redrawMapInfo() {
-    var markInf;
-    var coords = {};
-
-    //console.log('Starting redraw elapsed ms: ' + (Date.now() - elTimer));
-
-    mapSpinner.classList.remove("hidden");
-
-    coords.lat = map.getCenter().lat();
-    coords.lng = map.getCenter().lng();
-
-    //Check for wrapped coords
-    if (coords.lat < (-180)) {
-        coords.lat = coords.lat + 360;
-    }
-
-    //Check for wrapped coords
-    if (coords.lng < (-180)) {
-        coords.lng = coords.lng + 360;
-    }
-
-
-    //console.log('Finished moving or zooming map:' + coords.lat + ', ' + coords.lng);
-
-    if (currentRadius > 0 && currentRadius <= 2) {
-
-        retrieveMarkInformation(coords.lat, coords.lng).then(function (markInf) {
-                if (markInf.length > 0) {
-                    //Draw markers if value returned
-                    addMarkers(markInf);
-                }
-                mapSpinner.classList.add("hidden");
-                //console.log('Finished redraw (successful) elapsed ms: ' + (Date.now() - elTimer));
-
-            })
-            .catch(function (err) {
-                mapSpinner.classList.add("hidden");
-                console.log(err);
+                saveAs(blob, nineFigureNumber + '-sketch.pdf');
+            }).catch(function (error) {
+                console.log("PDF retrieval failed");
             });
 
-    } else {
+        }, false);
+        document.querySelector("[id=report" + nineFigureNumber + "]").addEventListener("click", function () {
+            console.log('Report: ' + nineFigureNumber);
 
-        mapSpinner.classList.add("hidden");
-        //console.log('Finished redraw (too big) elapsed ms: ' + (Date.now() - elTimer));
-    }
+            markStore.getSurveyMarkReportResponse(nineFigureNumber).then(function (pdfData) {
+                var blob = markStore.base64toBlob(pdfData.document, 'application/pdf');
 
+                saveAs(blob, nineFigureNumber + '-report.pdf');
+            }).catch(function (error) {
+                console.log("PDF retrieval failed");
+            });
+
+        }, false);
+        if (mobileOS !== "") {
+            document.querySelector("[id=navigate" + nineFigureNumber + "]").addEventListener("click", startNavigation, false);
+        }
+
+    };
 
 }
 
-/**
- * Determines what type of mark symbol should be used to display a specific mark.
- * @param {object} surveyMark - the data structure with the information for the specific mark
- * @return {string} - the symbol name to be used
- */
 function returnMarkerIconType(surveyMark) {
     var isSCN, isPCM, hasAHD, isSCNGDA94, isSCNAHD;
 
@@ -223,7 +296,7 @@ function returnMarkerIconType(surveyMark) {
 
     if (surveyMark.status != "OK") {
         //Defective mark
-        return "mark-defective";
+        return "defective";
     } else {
         //OK mark - determine other values
         if (surveyMark.scn === "Yes") {
@@ -251,154 +324,23 @@ function returnMarkerIconType(surveyMark) {
 
         //Now all of the source values have been retrieved, work through possible combinations to determine correct symbol
         if (!isSCN && !hasAHD) {
-            return "mark-gda94approx-pm";
+            return "gda94approx-pm";
         } else if (!isSCN && hasAHD) {
-            return "mark-ahdapprox-pm";
+            return "ahdapprox-pm";
         } else if (isSCN && isPCM) {
-            return "mark-scn-gda94-pcm";
+            return "scn-gda94-pcm";
         } else if (isSCN && !hasAHD && !isPCM) {
-            return "mark-scn-gda94-pm";
+            return "scn-gda94-pm";
         } else if (isSCN && hasAHD && !isSCNGDA94) {
-            return "mark-scn-ahd-pm";
+            return "scn-ahd-pm";
         } else if (isSCN && hasAHD && isSCNGDA94 && isSCNAHD) {
-            return "mark-scn-gda94-ahd-pm";
+            return "scn-gda94-ahd-pm";
         } else if (isSCN && hasAHD && isSCNGDA94 && !isSCNAHD) {
-            return "mark-scn-gda94-ahdapprox-pm";
+            return "scn-gda94-ahdapprox-pm";
         }
     }
 
 
-
-}
-
-/**
- * Draw markers for the marks retrieved from getMarkInformation to the map.
- * @param {object} mapMarkerInf - the data structure with the mark information
- */
-function addMarkers(mapMarkerInf) {
-
-    var markerIcon, markerSize, zoomLevel;
-    var addOverlay = false;
-
-    zoomLevel = map.getZoom();
-
-    if (zoomLevel < 16) {
-        markerSize = 12;
-    } else if (zoomLevel >= 16 && zoomLevel < 17) {
-        markerSize = 14;
-    } else if (zoomLevel >= 17 && zoomLevel < 19) {
-        markerSize = 16;
-    } else if (zoomLevel >= 19 && zoomLevel < 21) {
-        markerSize = 20;
-        addOverlay = true;
-    } else {
-        markerSize = 24;
-        addOverlay = true;
-    }
-
-    //Was displaying overlays and now scale is too large for overlays so remove from screen
-    if (displayingOverlays && !addOverlay) {
-        //Clear overlays
-        map.removeOverlays();
-        loadedOverlays = [];
-    }
-
-
-
-    mapMarkerInf.forEach(function (surveyMark) {
-        //Determine correct icon type
-        var iconType = returnMarkerIconType(surveyMark);
-        var navigateString;
-
-        //Set icon file based on type and size
-        markerIcon = "symbology/" + iconType + "-" + markerSize + ".png";
-
-        //check if this mark has been loaded
-        if (loadedMarks.indexOf(surveyMark.nineFigureNumber) === -1) {
-
-            if (mobileOS !== "") {
-                navigateString = '<button id="navigate' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color-text--primary smes-button fade-in">&nbsp;&nbsp;Navigate to mark&nbsp;&nbsp;</button>';
-            } else {
-                navigateString = '';
-            }
-
-            map.addMarker({
-                lat: surveyMark.latitude,
-                lng: surveyMark.longitude,
-                animation: google.maps.Animation.DROP,
-                title: surveyMark.name,
-                icon: markerIcon,
-                infoWindow: {
-                    content: '<p class="mdl-color-text--primary"><b>' + surveyMark.name + '</b></p><hr>' +
-                        '<p>Nine Figure Number: ' + surveyMark.nineFigureNumber + '</p>' +
-                        '<p>Status: ' + surveyMark.status + '</p>' +
-                        '<p>SCN: ' + surveyMark.scn + '</p>' +
-                        '<p>Zone: ' + surveyMark.zone + '</p>' +
-                        '<p>Easting: ' + surveyMark.easting + '</p>' +
-                        '<p>Northing: ' + surveyMark.northing + '</p>' +
-                        '<p>AHD Height: ' + surveyMark.ahdHeight + '</p>' +
-                        '<p>Ellipsoid Height: ' + surveyMark.ellipsoidHeight + '</p>' +
-                        '<p>GDA94 Technique: ' + surveyMark.gda94Technique + '</p>' +
-                        '<p>AHD Technique: ' + surveyMark.ahdTechnique + '</p>' +
-                        '<hr>' +
-                        navigateString +
-                        '<button id="sketch' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color-text--primary smes-button fade-in">&nbsp;&nbsp;View Mark Sketch&nbsp;&nbsp;</button>' +
-                        '<button id="report' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect mdl-color-text--primary smes-button fade-in">&nbsp;&nbsp;View Mark Report&nbsp;&nbsp;</button>',
-                    domready: function (e) {
-                        document.querySelector("[id=sketch" + surveyMark.nineFigureNumber + "]").addEventListener("click", getSurveyMarkSketch, false);
-                        document.querySelector("[id=report" + surveyMark.nineFigureNumber + "]").addEventListener("click", getSurveyMarkReport, false);
-                        if (mobileOS !== "") {
-                            document.querySelector("[id=navigate" + surveyMark.nineFigureNumber + "]").addEventListener("click", startNavigation, false);
-                        }
-                    }
-                },
-                click: function (e) {
-                    currentNineFigureNumber = surveyMark.nineFigureNumber;
-                    currentLatLng.lat = surveyMark.latitude;
-                    currentLatLng.lng = surveyMark.longitude;
-                    //console.log("Opening: " + surveyMark.nineFigureNumber);
-                },
-            });
-
-            //Add mark to loaded marks
-            loadedMarks.push(surveyMark.nineFigureNumber);
-        } else {
-            //Mark has been loaded so check if it has the correct size symbol
-
-            //Retrieve correct marker
-            var loadedMarker = map.markers.filter(function (marker) {
-                return marker.title === surveyMark.name;
-            });
-
-            //check the symbol, and refresh if necessary
-            if (loadedMarker[0].icon !== markerIcon) {
-                loadedMarker[0].setIcon(markerIcon);
-            }
-        }
-
-
-        //Draw overlay if zoom is > 17
-        if (addOverlay) {
-            displayingOverlays = true;
-
-            //check if this overlay has been loaded
-            if (loadedOverlays.indexOf(surveyMark.nineFigureNumber) === -1) {
-
-                map.drawOverlay({
-                    lat: surveyMark.latitude,
-                    lng: surveyMark.longitude,
-                    verticalAlign: 'bottom',
-                    horiztonalAlign: 'center',
-                    content: '<div class="overlay"><span class="overlay-text">' + surveyMark.name + '</span></div>'
-                });
-
-                //Add mark to loaded overlays
-                loadedOverlays.push(surveyMark.nineFigureNumber);
-
-            }
-        }
-
-    });
 
 }
 
@@ -437,68 +379,7 @@ function clearError() {
     errorMsg.classList.add("hidden");
 }
 
-function setUpAutoComplete() {
 
-    input = document.getElementById('pac-input');
-
-    searchMarker = new google.maps.Marker({
-        map: map.map,
-        anchorPoint: new google.maps.Point(0, -29)
-    });
-
-    autoComplete = new google.maps.places.Autocomplete(input);
-    autoComplete.bindTo('bounds', map.map);
-
-    infoWindow = new google.maps.InfoWindow();
-
-    autoComplete.addListener('place_changed', function () {
-        infoWindow.close();
-        searchMarker.setVisible(false);
-        var place = autoComplete.getPlace();
-
-        if (!place.geometry) {
-            return;
-        }
-
-        // If the place has a geometry, then present it on a map.
-        if (place.geometry.viewport) {
-            map.map.fitBounds(place.geometry.viewport);
-        } else {
-            map.map.setCenter(place.geometry.location);
-            map.setZoom(17); // Why 17? Because it will likely be close enough to load marks.
-        }
-        //Check for marks at new location
-        queueRedraw();
-        //Add map icon
-        searchMarker.setIcon( /** @type {google.maps.Icon} */ ({
-            url: place.icon,
-            size: new google.maps.Size(71, 71),
-            origin: new google.maps.Point(0, 0),
-            anchor: new google.maps.Point(17, 34),
-            scaledSize: new google.maps.Size(35, 35)
-        }));
-        searchMarker.setPosition(place.geometry.location);
-        searchMarker.setVisible(true);
-
-        var address = '';
-        if (place.address_components) {
-            address = [
-                (place.address_components[0] && place.address_components[0].short_name || ''),
-                (place.address_components[1] && place.address_components[1].short_name || ''),
-                (place.address_components[2] && place.address_components[2].short_name || '')
-            ].join(' ');
-        }
-
-        infoWindow.setContent('<div><strong>' + place.name + '</strong><br>' + address + '</div>');
-        infoWindow.open(map.map, searchMarker);
-
-    });
-
-    searchMarker.addListener('click', function () {
-        infoWindow.open(map.map, searchMarker);
-    });
-
-}
 
 /**
  * Attempt to open Google amps and start navigation to the currently selected mark's coordinates
@@ -521,244 +402,4 @@ function startNavigation() {
     }
 
 
-}
-
-/**
- * Call the getSurveyMarkSketchResponse function and open a new tab with the PDF result.  Use the currently selected nine figure number
- */
-function getSurveyMarkSketch() {
-    clearError();
-
-    getSurveyMarkSketchResponse(currentNineFigureNumber).then(function (markSketchData) {
-
-            window.open("data:application/pdf;base64," + encodeURI(markSketchData.document), "_blank");
-            //saveAs(dataURItoBlob("data:application/pdf;base64," + encodeURI(markSketchData.document)), "Survey Mark " + currentNineFigureNumber + " Sketch Report.pdf");
-
-        })
-        .catch(function (err) {
-            console.log(err);
-            displayError(err);
-        });
-
-}
-/**
- * Call the getSurveyMarkReportResponse function and open a new tab with the PDF result.  Use the currently selected nine figure number
- */
-function getSurveyMarkReport() {
-    clearError();
-
-    getSurveyMarkReportResponse(currentNineFigureNumber).then(function (markReportData) {
-
-            window.open("data:application/pdf;base64," + encodeURI(markReportData.document), "_blank");
-            //saveAs(dataURItoBlob("data:application/pdf;base64," + encodeURI(markReportData.document)), "Survey Mark " + currentNineFigureNumber + " Full Report.pdf");
-
-        })
-        .catch(function (err) {
-            console.log(err);
-            displayError(err);
-        });
-
-
-}
-
-/**
- * Call the getMarkInfornmation web service.  This is being called using for a specific mark using its Nine Figure Number
- * @param {number} cLat, cLong - the coordinates for the center of the radius to search in
- * @return {promise} a promise which will resolve a data structure which contains the mark information 
- */
-function retrieveMarkInformation(cLat, cLong) {
-    clearError();
-
-    //Show map spinner
-    mapSpinner.classList.remove("hidden");
-
-    return new Promise(function (resolve, reject) {
-        xr.get(baseURL + '/getMarkInformation', {
-                searchType: "Location",
-                latitude: cLat,
-                longitude: cLong,
-                radius: currentRadius,
-                format: "Brief"
-            })
-            .then(function (jsonResponse) {
-
-                //Check for success - the messages element will not be present for success
-                if (typeof jsonResponse.messages === 'undefined') {
-                    //Results returned
-                    //console.log(JSON.stringify(jsonResponse));
-                    zoomInMsg.classList.add("hidden");
-                    resolve(jsonResponse.data);
-                } else {
-                    //Error returned
-                    //Check for too many marks
-                    if (jsonResponse.messages.message === "More than 250 marks were found for this search. Please refine your search criteria.") {
-                        //Add message that the area has too many marks
-                        console.log("Too many marks");
-                        mapSpinner.classList.add("hidden");
-                        zoomInMsg.innerHTML = ZOOM_MSG_TEXT;
-                        zoomInMsg.classList.remove("hidden");
-
-                    } else if (jsonResponse.messages.message === "No survey marks matched the criteria provided.") {
-                        //Check for no marks
-                        console.log("No marks found");
-                        zoomInMsg.innerHTML = ZOOM_MSG_TEXT;
-                        mapSpinner.classList.remove("hidden");
-                    } else {
-                        //another message returned, log it
-                        console.log(jsonResponse.messages.message);
-                        displayError(jsonResponse.messages.message);
-                        mapSpinner.classList.add("hidden");
-                    }
-                }
-
-            })
-            .catch(function (err) {
-                console.log(err);
-                displayError();
-                return Promise.reject(err);
-            });
-    });
-
-}
-
-/**
- * Call the getSurveyMarSketches web service.  This is being called for a specific mark using its Nine Figure Number.
- * @param {string} nineFigureNumber - the mark's Ninem Figure Number
- * @return {promise} a promise which will resolve a data structure which contains the base64 encoded PDF 
- */
-
-function getSurveyMarkSketchResponse(nineFigureNumber) {
-
-    return new Promise(function (resolve, reject) {
-        xr.get(baseURL + '/getSurveyMarkSketches', {
-                markList: nineFigureNumber,
-                returnDefective: true
-            })
-            .then(function (jsonResponse) {
-
-                //Check for success - the messages element will not be present for success
-                if (typeof jsonResponse.messages === 'undefined') {
-                    //Results returned
-                    resolve(jsonResponse.data);
-                } else {
-                    //Error returned
-                    //another message returned, log it
-                    console.log(jsonResponse.messages.message);
-                }
-
-            })
-            .catch(function (err) {
-                console.log(err);
-                displayError();
-                return Promise.reject(err);
-            });
-    });
-}
-
-/**
- * Call the getSurveyMarkReports web service.  This is being called for a specific mark using its Nine Figure Number
- * @param {string} nineFigureNumber - the mark's Nine Figure Number
- * @return {promise} a promise which will resolve a data structure which contains the base64 encoded PDF 
- */
-function getSurveyMarkReportResponse(nineFigureNumber) {
-
-    return new Promise(function (resolve, reject) {
-        xr.get(baseURL + '/getSurveyMarkReports', {
-                markList: nineFigureNumber,
-                returnDefective: true
-            })
-            .then(function (jsonResponse) {
-
-                //Check for success - the messages element will not be present for success
-                if (typeof jsonResponse.messages === 'undefined') {
-                    //Results returned
-                    resolve(jsonResponse.data);
-                } else {
-                    //Error returned
-                    //another message returned, log it
-                    console.log(jsonResponse.messages.message);
-                }
-
-            })
-            .catch(function (err) {
-                console.log();
-                return Promise.reject(err);
-            });
-    });
-}
-
-/**
- * Check to see whether the map is zoomed to 2km "radius" or less.  Radius is determined by measuring from the centre point to the wouth west corner of the map
- */
-function checkSizeofCurrentMap() {
-
-    mapSpinner.classList.remove("hidden");
-
-    var mapBounds = map.getBounds();
-    //console.log(mapBounds);
-    //console.log(centreCoords);
-    //console.log(Date.now() + ": zoom changed");
-
-    if (typeof mapBounds !== 'undefined') {
-        var mapRadius = getDistanceKms(map.getCenter().lat(), map.getCenter().lng(), map.getBounds().getSouthWest().lat(), map.getBounds().getSouthWest().lng());
-        //console.log("Radius in kms:" + (mapRadius / 1000));
-
-        currentRadius = (mapRadius / 1000);
-    } else {
-        currentRadius = 0;
-    }
-
-    if (currentRadius > 0 && currentRadius <= 2) {
-        zoomInMsg.classList.add("hidden");
-    } else {
-        zoomInMsg.innerHTML = ZOOM_MSG_TEXT;
-        zoomInMsg.classList.remove("hidden");
-    }
-
-    mapSpinner.classList.add("hidden");
-}
-
-/**
- * Calculate the distance between two points in kilometres
- * @params {number} - coordinate values in latitude and longitude for the two points
- */
-function getDistanceKms(point1Lat, point1Lng, point2Lat, point2Lng) {
-    var R = 6378137; // Earth’s mean radius
-    var dLat = calcRad(point2Lat - point1Lat);
-    var dLong = calcRad(point2Lng - point1Lng);
-    var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(calcRad(point1Lat)) * Math.cos(calcRad(point2Lat)) *
-        Math.sin(dLong / 2) * Math.sin(dLong / 2);
-    var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
-    var d = R * c;
-
-    return d; // returns the distance in metres
-}
-
-/**
- * Calculate radians for a given value
- * @params {number} x - the input value
- */
-function calcRad(x) {
-    return x * Math.PI / 180;
-}
-
-function dataURItoBlob(dataURI, callback) {
-    // convert base64 to raw binary data held in a string
-    // doesn't handle URLEncoded DataURIs - see SO answer #6850276 for code that does this
-    var byteString = window.atob(dataURI.split(',')[1]);
-
-    // separate out the mime component
-    var mimeString = dataURI.split(',')[0].split(':')[1].split(';')[0];
-
-    // write the bytes of the string to an ArrayBuffer
-    var ab = new ArrayBuffer(byteString.length);
-    var ia = new Uint8Array(ab);
-    for (var i = 0; i < byteString.length; i++) {
-        ia[i] = byteString.charCodeAt(i);
-    }
-
-    // write the ArrayBuffer to a blob, and you're done
-    var bb = new Blob([ab]);
-    return bb;
 }
