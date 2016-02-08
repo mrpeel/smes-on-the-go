@@ -1847,9 +1847,14 @@ function displayZoomMessage() {
 
 function loadMarks() {
     //Work through the new markers and add to the map, then work through updated markers and update on the map
-    var surveyMark, address, iconName, navigateString, scnDiv, infoWindowContent, contentSDiv, contentMDiv, contentEDiv;
+    var surveyMark, address, markType, navigateString, infoWindowContent, contentSDiv, contentMDiv, contentEDiv;
 
     console.log("loadMarks");
+
+    contentSDiv = '<div class="card-content"><div class="card-left">';
+    contentMDiv = '</div><div class="card-value">';
+    contentEDiv = '</div></div>';
+
 
     //Add new marks
     for (var n = 0; n < markStore.newIndex.length; n++) {
@@ -1860,7 +1865,7 @@ function loadMarks() {
 
         surveyMark = markStore.markData[markStore.newIndex[n]].data;
         address = markStore.markData[markStore.newIndex[n]].address || '';
-        iconName = "symbology/" + returnMarkerIconType(surveyMark);
+        markType = returnMarkType(surveyMark);
 
         if (mobileOS !== "") {
             navigateString = '<button id="navigate' + surveyMark.nineFigureNumber + '" class="smes-button mdl-button mdl-js-button mdl-js-ripple-effect fade-in">Navigate</button>';
@@ -1868,31 +1873,22 @@ function loadMarks() {
             navigateString = '';
         }
 
-        if (surveyMark.scn === "Yes") {
-            scnDiv = "SCN";
-        } else {
-            scnDiv = "Non-SCN";
-        }
 
         eventListeners.domready = domReadyHandler(surveyMark.nineFigureNumber);
         eventListeners.click = markClickHandler(surveyMark.nineFigureNumber, parseFloat(surveyMark.latitude), parseFloat(surveyMark.longitude));
 
-        contentSDiv = '<div class="card-content"><div class="card-left">';
-        contentMDiv = '</div><div class="card-value">';
-        contentEDiv = '</div></div>';
 
         infoWindowContent = '<div class="info-window-header">' +
-            '<div class="section__circle-container mdl-cell mdl-cell--2-col mdl-cell--1-col-phone">' +
-            '<div class="section__circle-container__circle card-symbol"> ' +
-            '<img class="info-symbol" src="' + iconName + '.svg">' +
-            '</div>' +
-            '</div>' +
-            '<div class="section__text mdl-cell mdl-cell--6-col-desktop mdl-cell--4-col-tablet mdl-cell--4-col-phone">' +
+            '<div class="header-text secion__text">' +
             '<div class="nine-figure">' + surveyMark.nineFigureNumber + '</div>' +
-            '<div class="mark-name">' + surveyMark.name + '</div>' +
-            '<div class="mark-status"><div>' + scnDiv + '</div>' +
+            '<div class="mark-name"><h6>' + surveyMark.name + '</h6></div>' +
+            '<div class="mark-status"><div>' + markType.markDetails + '</div>' +
             '</div></div>' +
-            '<div id="address' + surveyMark.nineFigureNumber + '"></div></div>' +
+            '<div class="section__circle-container">' +
+            '<div class="section__circle-container__circle card-symbol"> ' +
+            '<img class="info-symbol" src="symbology/' + markType.iconName + '.svg">' +
+            '</div></div></div>' +
+            '<div id="address' + surveyMark.nineFigureNumber + '"></div>' +
             contentSDiv + 'AHD height:' + contentMDiv + surveyMark.ahdHeight + contentEDiv +
             contentSDiv + 'Ellipsoid height:' + contentMDiv + surveyMark.ellipsoidHeight + contentEDiv +
             contentSDiv + 'GDA94 technique:' + contentMDiv + surveyMark.gda94Technique + contentEDiv +
@@ -1908,7 +1904,7 @@ function loadMarks() {
         marker.lat = surveyMark.latitude;
         marker.lng = surveyMark.longitude;
         marker.title = surveyMark.name;
-        marker.icon = iconName;
+        marker.icon = 'symbology/' + markType.iconName;
         marker.nineFigureNo = surveyMark.nineFigureNumber;
         marker.eventListeners = eventListeners;
         marker.infoWindowContent = infoWindowContent;
@@ -1933,13 +1929,40 @@ function loadMarks() {
         var uLabel = {};
 
         surveyMark = markStore.markData[markStore.newIndex[u]].data;
-        iconName = returnMarkerIconType(surveyMark);
+        markType = returnMarkType(surveyMark);
+
+
+        infoWindowContent = '<div class="info-window-header">' +
+            '<div class="section__circle-container mdl-cell mdl-cell--2-col mdl-cell--1-col-phone">' +
+            '<div class="section__circle-container__circle card-symbol"> ' +
+            '<img class="info-symbol" src="symbology/' + markType.iconName + '.svg">' +
+            '</div>' +
+            '</div>' +
+            '<div class="section__text mdl-cell mdl-cell--6-col-desktop mdl-cell--4-col-tablet mdl-cell--4-col-phone">' +
+            '<div class="nine-figure">' + surveyMark.nineFigureNumber + '</div>' +
+            '<div class="mark-name">' + surveyMark.name + '</div>' +
+            '<div class="mark-status"><div>' + markType.markDetails + '</div>' +
+            '</div></div>' +
+            '<div class="mdl-cell mdl-cell--8-col mdl-cell--5-col-phone">' +
+            '<div id="address' + surveyMark.nineFigureNumber + '"></div></div>' +
+            contentSDiv + 'AHD height:' + contentMDiv + surveyMark.ahdHeight + contentEDiv +
+            contentSDiv + 'Ellipsoid height:' + contentMDiv + surveyMark.ellipsoidHeight + contentEDiv +
+            contentSDiv + 'GDA94 technique:' + contentMDiv + surveyMark.gda94Technique + contentEDiv +
+            contentSDiv + 'AHD technique:' + contentMDiv + surveyMark.ahdTechnique + contentEDiv +
+            contentSDiv + 'MGA:' + contentMDiv + surveyMark.zone + ', ' + surveyMark.easting + ', ' + surveyMark.northing + contentEDiv +
+            '</div>' +
+            '<div class = "button-section">' +
+            '<button id="sketch' + surveyMark.nineFigureNumber + '" class="smes-button mdl-button mdl-js-button mdl-js-ripple-effect fade-in">Sketch</button>' +
+            '<button id="report' + surveyMark.nineFigureNumber + '" class="smes-button mdl-button mdl-js-button mdl-js-ripple-effect fade-in">Report</button>' +
+            navigateString +
+            '</div>';
+
 
 
         uMarker.lat = surveyMark.latitude;
         uMarker.lng = surveyMark.longitude;
         uMarker.title = surveyMark.name;
-        uMarker.icon = iconName;
+        uMarker.icon = 'symbology/' + markType.iconName;
         uMarker.nineFigureNo = surveyMark.nineFigureNumber;
         uMarker.infoWindowContent = infoWindowContent;
 
@@ -1971,7 +1994,7 @@ function markClickHandler(nineFigureNumber, lat, lng) {
         var address = "";
 
         if (addressDiv) {
-            address = smesMap.returnAddress(currentNineFigureNumber);
+            address = markStore.returnAddress(currentNineFigureNumber);
             if (address !== "") {
                 addressDiv.innerHTML = address;
             } else {
@@ -2029,19 +2052,19 @@ function domReadyHandler(nineFigureNumber) {
 
 }
 
-function returnMarkerIconType(surveyMark) {
-    var isSCN, isPCM, hasAHD, isSCNGDA94, isSCNAHD;
+function returnMarkType(surveyMark) {
+    var markType = {};
+    var isSCN = false,
+        isPCM = false,
+        hasAHD = false,
+        isSCNGDA94 = false,
+        isSCNAHD = false,
+        isDefective = hasAHD;
 
-    //Set default values for each type
-    isSCN = false;
-    isPCM = false;
-    hasAHD = false;
-    isSCNGDA94 = false;
-    isSCNAHD = false;
 
     if (surveyMark.status != "OK") {
         //Defective mark
-        return "defective";
+        isDefective = true;
     } else {
         //OK mark - determine other values
         if (surveyMark.scn === "Yes") {
@@ -2068,27 +2091,37 @@ function returnMarkerIconType(surveyMark) {
         });
 
         //Now all of the source values have been retrieved, work through possible combinations to determine correct symbol
-        if (!isSCN && !hasAHD) {
-            return "gda94approx-pm";
-        } else if (!isSCN && hasAHD) {
-            return "ahdapprox-pm";
-        } else if (isSCN && isPCM) {
-            return "scn-gda94-pcm";
-        } else if (isSCN && !hasAHD && !isPCM) {
-            return "scn-gda94-pm";
-        } else if (isSCN && hasAHD && !isSCNGDA94) {
-            return "scn-ahd-pm";
-        } else if (isSCN && hasAHD && isSCNGDA94 && isSCNAHD) {
-            return "scn-gda94-ahd-pm";
-        } else if (isSCN && hasAHD && isSCNGDA94 && !isSCNAHD) {
-            return "scn-gda94-ahdapprox-pm";
+        if (isDefective) {
+            markType.iconName = "defective";
+            markType.markDetails = "Defective";
+
+        } else if (!isDefective && !isSCN && !hasAHD) {
+            markType.iconName = "gda94approx-pm";
+            markType.markDetails = "Non-SCN (GDA94)";
+        } else if (!isDefective && !isSCN && hasAHD) {
+            markType.iconName = "ahdapprox-pm";
+            markType.markDetails = "Non-SCN (GDA94), non-SCN (AHD)";
+        } else if (!isDefective && isSCN && isPCM) {
+            markType.iconName = "scn-gda94-pcm";
+            markType.markDetails = "SCN (GDA94)";
+        } else if (!isDefective && isSCN && !hasAHD && !isPCM) {
+            markType.iconName = "scn-gda94-pm";
+            markType.markDetails = "SCN (GDA94)";
+        } else if (!isDefective && isSCN && hasAHD && !isSCNGDA94) {
+            markType.iconName = "scn-ahd-pm";
+            markType.markDetails = "Non-SCN (GDA94), SCN (AHD)";
+        } else if (!isDefective && isSCN && hasAHD && isSCNGDA94 && isSCNAHD) {
+            markType.iconName = "scn-gda94-ahd-pm";
+            markType.markDetails = "SCN (GDA94), SCN (AHD)";
+        } else if (!isDefective && isSCN && hasAHD && isSCNGDA94 && !isSCNAHD) {
+            markType.iconName = "scn-gda94-ahdapprox-pm";
+            markType.markDetails = "Non-SCN (GDA94)";
         }
     }
 
-
+    return markType;
 
 }
-
 /**
  * Attempt to detect the page being used ona  mobile device.
  * @return {string} - Android, iOS or empty string

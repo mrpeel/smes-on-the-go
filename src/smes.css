@@ -16,6 +16,19 @@ body {
     left: 10px;
     z-index: 1;
 }
+.loader {
+    width: 100%;
+}
+.bufferbar {
+    background-color: #f44336 !important;
+    background-image: linear-gradient(to right, rgba(255, 255, 255, .7), rgba(255, 255, 255, .7)), linear-gradient(to right, rgb(83, 109, 254), rgb(83, 109, 254)) !important;
+}
+.progressbar {
+    background-color: #f44336 !important;
+}
+.auxbar {
+    background-color: #ffeb3b !important;
+}
 .controls {
     border-style: none;
     outline-style: none;
@@ -112,7 +125,6 @@ body {
 }
 .card-left {
     width: 110px;
-    padding-left: 16px;
 }
 .card-value {
     -webkit-flex: auto;
@@ -182,12 +194,30 @@ body {
     display: flex;
     -webkit-flex-direction: row;
     flex-direction: row;
+    min-width: 400px;
+}
+.section__circle-container {
+    width: 72px;
+    height: 72px;
+    right: 0;
+    flex: none;
 }
 .section__circle-container > .section__circle-container__circle {
-    width: 56px;
-    height: 56px;
-    border-radius: 28px;
-    margin: 8px 0;
+    width: 64px;
+    height: 64px;
+    border-radius: 32px;
+    margin: 0;
+    position: absolute;
+    z-index: 200;
+}
+.info-symbol {
+    padding-top: 14px;
+    padding-bottom: 10px;
+    padding-left: 15px;
+    height: 34px;
+    width: 34px;
+    z-index: 200;
+    position: absolute;
 }
 .section__circle {
     display: flex;
@@ -195,6 +225,7 @@ body {
     justify-content: flex-start;
     flex-grow: 0;
     flex-shrink: 1;
+    margin-right: 24px;
 }
 .section__text {
     -webkit-flex: auto;
@@ -214,23 +245,16 @@ body {
 }
 .mark-name {
     font-family: "Muli";
-    font-size: 1.25em;
-    padding-left: 20px;
+    /*font-size: 1.25em;*/
+    padding-left: 10px;
     -webkit-flex: auto;
     flex: auto;
 }
 .nine-figure,
 .mark-status {
-    padding-left: 20px;
+    padding-left: 10px;
     -webkit-flex: auto;
     flex: auto;
-}
-.info-symbol {
-    padding-top: 14px;
-    padding-bottom: 10px;
-    padding-left: 15px;
-    height: 28px;
-    width: 28px;
 }
 .single-col {
     padding-left: 8px;
