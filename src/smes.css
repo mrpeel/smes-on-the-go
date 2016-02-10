@@ -20,14 +20,14 @@ body {
     width: 100%;
 }
 .bufferbar {
-    background-color: #f44336 !important;
+    background-color: #e91e63 !important;
     background-image: linear-gradient(to right, rgba(255, 255, 255, .7), rgba(255, 255, 255, .7)), linear-gradient(to right, rgb(83, 109, 254), rgb(83, 109, 254)) !important;
 }
 .progressbar {
-    background-color: #f44336 !important;
+    background-color: rgb(33, 150, 243) !important;
 }
 .auxbar {
-    background-color: #ffeb3b !important;
+    background-color: #e91e63 !important;
 }
 .controls {
     border-style: none;
@@ -243,16 +243,16 @@ body {
     -webkit-flex-direction: row;
     flex-direction: row;
 }
-.mark-name {
+.header-text {
     font-family: "Muli";
+}
+.mark-name {
     /*font-size: 1.25em;*/
-    padding-left: 10px;
     -webkit-flex: auto;
     flex: auto;
 }
 .nine-figure,
 .mark-status {
-    padding-left: 10px;
     -webkit-flex: auto;
     flex: auto;
 }
@@ -268,4 +268,29 @@ body {
 }
 .smes-button.mdl-button--raised {
     background-color: rgba(158, 158, 158, 0.05);
+}
+.infobox-wrapper {
+    display: none;
+}
+.infobox {
+    min-width: 400px;
+    max-width: 100vw;
+}
+.info-box-arrow {
+    font-size: 50px;
+    top: -25px;
+    left: 200px;
+    position: absolute;
+}
+.mdl-card {
+    z-index: 15;
+}
+.mdl-card__title {
+    display: block;
+    background-color: rgb(33, 150, 243);
+}
+.close-button {
+    position: absolute;
+    right: 5px;
+    top: 15px;
 }

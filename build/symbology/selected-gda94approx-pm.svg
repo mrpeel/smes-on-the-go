@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+<svg id="svg4691" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://www.w3.org/2000/svg" height="200" viewBox="0 0 200 200" width="200" version="1.1" xmlns:cc="http://creativecommons.org/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/">
+ <defs id="defs8">
+  <filter id="filter5043-8-0" style="color-interpolation-filters:sRGB">
+   <feGaussianBlur id="feGaussianBlur5045-6-1" stdDeviation="5 5" result="blur"/>
+  </filter>
+  <filter id="filter5014" style="color-interpolation-filters:sRGB">
+   <feGaussianBlur id="feGaussianBlur5016" stdDeviation="10 10" result="blur"/>
+  </filter>
+ </defs>
+ <metadata id="metadata4696">
+  <rdf:RDF>
+   <cc:Work rdf:about="">
+    <dc:format>image/svg+xml</dc:format>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:title/>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <g id="layer3" transform="translate(0,68)">
+  <path id="path4337" fill="#2196f3" stroke-opacity=".97647" fill-opacity=".99216" transform="matrix(8.689 0 0 3.9338 -1200.9 789.09)" stroke="#2196f3" stroke-width="3.319" d="m149.69-174.98 1.8788 3.2542 1.8788 3.2542h-3.7577-3.7577l1.8788-3.2542z"/>
+ </g>
+ <g id="layer9" stroke-width="12.5" fill="none">
+  <g id="layer2-6-3" transform="translate(34.481 -896.14)" filter="url(#filter5014)" stroke="#0277a6">
+   <path id="path4178-5" d="m64.035 935.67v111.44"/>
+   <path id="path4180-3" d="m7.4799 1000.9c59.908-65.8 59.908-65.8 59.908-65.8"/>
+   <path id="path4180-5-2" d="m120.44 1000.4c-59.904-65.73-59.904-65.73-59.904-65.73"/>
+  </g>
+  <g id="layer2-6-30" transform="translate(35.023 -896.08)" filter="url(#filter5043-8-0)" stroke="#837561">
+   <path id="path4178-50" d="m64.035 935.67v111.44"/>
+   <path id="path4180-9" d="m7.4799 1000.9c59.908-65.8 59.908-65.8 59.908-65.8"/>
+   <path id="path4180-5-7" d="m120.44 1000.4c-59.904-65.73-59.904-65.73-59.904-65.73"/>
+  </g>
+  <g id="layer2-6-37" transform="translate(34.481 -896.14)" stroke="#fff">
+   <path id="path4178-1" d="m64.035 935.67v111.44"/>
+   <path id="path4180-8" d="m7.4799 1000.9c59.908-65.8 59.908-65.8 59.908-65.8"/>
+   <path id="path4180-5-1" d="m120.44 1000.4c-59.904-65.73-59.904-65.73-59.904-65.73"/>
+  </g>
+  <g id="layer2-6" transform="translate(34.481 -896.68)" stroke="#210000">
+   <path id="path4178" d="m64.035 935.67v111.44"/>
+   <path id="path4180" d="m7.4799 1000.9c59.908-65.8 59.908-65.8 59.908-65.8"/>
+   <path id="path4180-5" d="m120.44 1000.4c-59.904-65.73-59.904-65.73-59.904-65.73"/>
+  </g>
+ </g>
+</svg>

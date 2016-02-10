@@ -122,6 +122,11 @@ gulp.task('copylibfiles', ['disthtml'], function () {
     gulp.src(['lib/Promise.min.js'])
         .pipe(gulp.dest('build/'))
         .pipe(gulp.dest('dist/'));
+
+    gulp.src(['lib/fetch.min.js'])
+        .pipe(gulp.dest('build/'))
+        .pipe(gulp.dest('dist/'));
+
 });
 
 /* Copy symbology files to the build and dist directories.

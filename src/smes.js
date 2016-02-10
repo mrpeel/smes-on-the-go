@@ -2,7 +2,7 @@
 
 
 //Variables for display
-var mapSpinner;
+var loader;
 var locateButton;
 var zoomInMsg;
 var errorMsg;
@@ -21,7 +21,7 @@ var currentRadius;
 
 window.addEventListener('load', function (e) {
 
-    mapSpinner = document.querySelector("[id=map-spinner]");
+    loader = document.querySelector("[id=loader]");
     zoomInMsg = document.querySelector("[id=zoom-in-msg]");
     errorMsg = document.querySelector("[id=error-msg]");
     locateButton = document.querySelector("[id=locate]");
@@ -81,11 +81,21 @@ function requestMarkInformation() {
     mapCenter = smesMap.map.getCenter();
     radius = smesMap.mapSize || 2;
 
+    showLoader();
+
     console.log("requestMarkInformation");
 
     markStore.requestMarkInformation(mapCenter.lat(), mapCenter.lng(), radius, loadMarks, displayZoomMessage);
     console.log(markStore.newIndex);
 
+}
+
+function showLoader() {
+    loader.classList.remove("hidden");
+}
+
+function hideLoader() {
+    loader.classList.add("hidden");
 }
 
 
@@ -105,17 +115,25 @@ function displayZoomMessage() {
     } else {
         zoomInMsg.classList.add("hidden");
     }
+    hideLoader();
 }
 
 function loadMarks() {
     //Work through the new markers and add to the map, then work through updated markers and update on the map
-    var surveyMark, address, markType, navigateString, infoWindowContent, contentSDiv, contentMDiv, contentEDiv;
+    var surveyMark, address, markType, navigateString, infoWindowContent, contentSDiv, contentMDiv, contentEDiv, closeButton, cardDiv;
 
     console.log("loadMarks");
 
     contentSDiv = '<div class="card-content"><div class="card-left">';
     contentMDiv = '</div><div class="card-value">';
     contentEDiv = '</div></div>';
+
+    closeButton = '<button id="close-info-box" class="close-button mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--icon">' +
+        '<i class="material-icons">close</i>' +
+        '</button>';
+
+    cardDiv = '<div class="mdl-card infobox mdl-shadow--3dp overflow-x-visible">';
+
 
 
     //Add new marks
@@ -162,6 +180,26 @@ function loadMarks() {
             navigateString +
             '</div>';
 
+        infoWindowContent = cardDiv + '<div class="mdl-card__title mdl-color-text--white">' +
+            '<div class="header-text">' +
+            '<div class="nine-figure">' + surveyMark.nineFigureNumber + '</div>' +
+            '<div><h2 class="mdl-card__title-text">' + surveyMark.name + '</h2></div>' +
+            '<div class="mark-name">' + markType.markDetails + '</div>' +
+            '</div>' +
+            closeButton +
+            '</div>' +
+            '<div class="mdl-card__supporting-text">' +
+            '<div>Zone: ' + surveyMark.zone + '</div>' +
+            '<div>Easting: ' + surveyMark.easting + '</div>' +
+            '<div>Northing: ' + surveyMark.northing + '</div>' +
+            '<div>AHD Height: ' + surveyMark.ahdHeight + '</div>' +
+            '<div>Ellipsoid Height: ' + surveyMark.ellipsoidHeight + '</div>' +
+            '<div>GDA94 Technique: ' + surveyMark.gda94Technique + '</div>' +
+            '<div>AHD Technique: ' + surveyMark.ahdTechnique + '</div>' +
+            '</div><div class="mdl-card__actions mdl-card--border">' +
+            '<button id="sketch' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-color-text--primary smes-button fade-in">Sketch</button>' +
+            '<button id="report' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-color-text--primary smes-button fade-in">Report</button>' +
+            '</div></div>';
 
         marker.lat = surveyMark.latitude;
         marker.lng = surveyMark.longitude;
@@ -266,7 +304,7 @@ function markClickHandler(nineFigureNumber, lat, lng) {
 
                         addressDiv.innerHTML = result;
 
-                        markStore.updateAddress(currentNineFigureNumber, result);
+                        markStore.setAddress(currentNineFigureNumber, result);
 
                     }
                 });

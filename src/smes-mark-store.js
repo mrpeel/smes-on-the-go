@@ -1,5 +1,5 @@
 /*global Promise, setTimeout, window, document, console, navigator, self, MouseEvent, Blob, FileReader, module, atob, Uint8Array, define */
-/*global ReverseGeocoder, xr */
+/*global ReverseGeocoder, fetch */
 
 
 var SMESMarkStore = function () {
@@ -363,14 +363,19 @@ SMESMarkStore.prototype.retrieveMarkInformation = function (cLat, cLong, cRadius
     var self = this;
 
     return new Promise(function (resolve, reject) {
-        xr.get(self.baseURL + '/getMarkInformation', {
+
+        /*xr.get(self.baseURL + '/getMarkInformation', {
                 searchType: "Location",
                 latitude: cLat,
                 longitude: cLong,
                 radius: cRadius,
                 format: "Full"
-            })
-            .then(function (jsonResponse) {
+            })*/
+        fetch(self.baseURL + "/getMarkInformation?searchType=Location&latitude=" + cLat + "&longitude=" + cLong + "&radius=" + cRadius + "&format=Full", {
+                mode: 'cors'
+            }).then(function (response) {
+                return response.json();
+            }).then(function (jsonResponse) {
 
                 //Check for success - the messages element will not be present for success
                 if (typeof jsonResponse.messages === 'undefined') {
@@ -398,10 +403,10 @@ SMESMarkStore.prototype.retrieveMarkInformation = function (cLat, cLong, cRadius
             })
             .catch(function (err) {
                 console.log(err);
-                if (xr.status === 0 && xr.response === "") {
-                    self.delayNextRequest();
-                    console.log("Too many requests");
-                }
+                //if (xr.status === 0 && xr.response === "") {
+                self.delayNextRequest();
+                console.log("Too many requests");
+                //}
                 return Promise.reject(err);
             });
     });
@@ -420,10 +425,15 @@ SMESMarkStore.prototype.getSurveyMarkSketchResponse = function (nineFigureNumber
     var self = this;
 
     return new Promise(function (resolve, reject) {
-        xr.get(self.baseURL + '/getSurveyMarkSketches', {
-                markList: nineFigureNumber,
-                returnDefective: true
+        fetch(self.baseURL + "/getSurveyMarkSketches?returnDefective=true&markList=" + nineFigureNumber, {
+                mode: 'cors'
+            }).then(function (response) {
+                return response.json();
             })
+            /*xr.get(self.baseURL + '/getSurveyMarkSketches', {
+                    markList: nineFigureNumber,
+                    returnDefective: true
+                })*/
             .then(function (jsonResponse) {
 
                 //Check for success - the messages element will not be present for success
@@ -456,11 +466,17 @@ SMESMarkStore.prototype.getSurveyMarkReportResponse = function (nineFigureNumber
     var self = this;
 
     return new Promise(function (resolve, reject) {
-        xr.get(self.baseURL + '/getSurveyMarkReports', {
+        /*xr.get(self.baseURL + '/getSurveyMarkReports', {
                 markList: nineFigureNumber,
                 returnDefective: true
-            })
-            .then(function (jsonResponse) {
+            })*/
+        fetch(self.baseURL + "/getSurveyMarkReports?returnDefective=true&markList=" + nineFigureNumber, {
+            mode: 'cors'
+        }).then(function (response) {
+            return response.json();
+        })
+
+        .then(function (jsonResponse) {
 
                 //Check for success - the messages element will not be present for success
                 if (typeof jsonResponse.messages === 'undefined') {

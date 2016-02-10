@@ -15,7 +15,7 @@
     <link href="https://fonts.googleapis.com/css?family=Roboto:regular,bold,italic,thin,light,bolditalic,black,medium&amp;lang=en" rel="stylesheet">
     <link href='https://fonts.googleapis.com/css?family=Muli' rel='stylesheet' type='text/css'>
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
-    <link rel="stylesheet" href="https://storage.googleapis.com/code.getmdl.io/1.0.6/material.teal-indigo.min.css" />
+    <link rel="stylesheet" href="https://storage.googleapis.com/code.getmdl.io/1.0.6/material.blue-pink.min.css" />
     <link rel="stylesheet" href="smes-on-the-go.min.css" />
 
 </head>
@@ -78,13 +78,20 @@
                 <div id="zoom-in-msg" class="zoom-in-message hidden"><span class="zoom-in-message-text">Displaying cached marks - zoom to refresh</span></div>
 
             </div>
+            <div class="infobox-wrapper">
+
+                <div id="infobox">
+
+                </div>
+            </div>
 
         </main>
     </div>
 
     <script>
-        // If Promise is not supported, include the polyfill
+        // If Promise and/or fetch are not supported, include the polyfill
         window.Promise || document.write("<script src=Promise.min.js><\/script>");
+        window.fetch || document.write("<script src=fetch.min.js><\/script>");
 
     </script>
 

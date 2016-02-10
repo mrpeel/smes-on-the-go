@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+<svg id="svg4691" xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#" xmlns="http://www.w3.org/2000/svg" height="200" viewBox="0 0 200 200" width="200" version="1.1" xmlns:cc="http://creativecommons.org/ns#" xmlns:dc="http://purl.org/dc/elements/1.1/">
+ <defs id="defs8">
+  <filter id="filter4524" style="color-interpolation-filters:sRGB" height="1.12" width="1.12" y="-0.06" x="-0.06">
+   <feGaussianBlur id="feGaussianBlur4526" stdDeviation="2.7126698"/>
+  </filter>
+ </defs>
+ <metadata id="metadata4696">
+  <rdf:RDF>
+   <cc:Work rdf:about="">
+    <dc:format>image/svg+xml</dc:format>
+    <dc:type rdf:resource="http://purl.org/dc/dcmitype/StillImage"/>
+    <dc:title/>
+   </cc:Work>
+  </rdf:RDF>
+ </metadata>
+ <g id="layer8">
+  <g id="layer1-6-7" transform="matrix(1.0781 0 0 1.0781 28.913 -975.04)" filter="url(#filter4524)" stroke="#e68de7">
+   <ellipse id="path5239-0" rx="54.253" ry="54.253" stroke="#e68de7" cy="988.28" cx="64.742" stroke-width="13.493" fill="none"/>
+  </g>
+ </g>
+ <g id="layer3" transform="translate(0,68)">
+  <path id="path4337" fill="#2196f3" stroke-opacity=".97647" fill-opacity=".99216" transform="matrix(8.689 0 0 3.9338 -1200.9 789.09)" stroke="#2196f3" stroke-width="3.319" d="m149.69-174.98 1.8788 3.2542 1.8788 3.2542h-3.7577-3.7577l1.8788-3.2542z"/>
+ </g>
+ <g id="layer4" transform="translate(0,68)">
+  <g id="layer1-6-0" transform="translate(35.055 -965.84)" stroke="#fff" fill="#fff">
+   <ellipse id="path5239-1" rx="54.253" ry="54.253" stroke="#fff" cy="988.28" cx="64.742" stroke-width="13.493" fill="#fff"/>
+  </g>
+ </g>
+ <g id="layer7">
+  <g id="layer1-6" transform="translate(35.055 -898.93)">
+   <ellipse id="path5239" rx="54.253" ry="54.253" stroke="#1c9210" cy="988.28" cx="64.742" stroke-width="13.493" fill="none"/>
+  </g>
+ </g>
+</svg>

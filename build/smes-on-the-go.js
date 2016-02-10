@@ -1,5 +1,5 @@
 /*global Promise, setTimeout, window, document, console, navigator, self, MouseEvent, Blob, FileReader, module, atob, Uint8Array, define */
-/*global ReverseGeocoder, xr */
+/*global ReverseGeocoder, fetch */
 
 
 var SMESMarkStore = function () {
@@ -363,14 +363,19 @@ SMESMarkStore.prototype.retrieveMarkInformation = function (cLat, cLong, cRadius
     var self = this;
 
     return new Promise(function (resolve, reject) {
-        xr.get(self.baseURL + '/getMarkInformation', {
+
+        /*xr.get(self.baseURL + '/getMarkInformation', {
                 searchType: "Location",
                 latitude: cLat,
                 longitude: cLong,
                 radius: cRadius,
                 format: "Full"
-            })
-            .then(function (jsonResponse) {
+            })*/
+        fetch(self.baseURL + "/getMarkInformation?searchType=Location&latitude=" + cLat + "&longitude=" + cLong + "&radius=" + cRadius + "&format=Full", {
+                mode: 'cors'
+            }).then(function (response) {
+                return response.json();
+            }).then(function (jsonResponse) {
 
                 //Check for success - the messages element will not be present for success
                 if (typeof jsonResponse.messages === 'undefined') {
@@ -398,10 +403,10 @@ SMESMarkStore.prototype.retrieveMarkInformation = function (cLat, cLong, cRadius
             })
             .catch(function (err) {
                 console.log(err);
-                if (xr.status === 0 && xr.response === "") {
-                    self.delayNextRequest();
-                    console.log("Too many requests");
-                }
+                //if (xr.status === 0 && xr.response === "") {
+                self.delayNextRequest();
+                console.log("Too many requests");
+                //}
                 return Promise.reject(err);
             });
     });
@@ -420,10 +425,15 @@ SMESMarkStore.prototype.getSurveyMarkSketchResponse = function (nineFigureNumber
     var self = this;
 
     return new Promise(function (resolve, reject) {
-        xr.get(self.baseURL + '/getSurveyMarkSketches', {
-                markList: nineFigureNumber,
-                returnDefective: true
+        fetch(self.baseURL + "/getSurveyMarkSketches?returnDefective=true&markList=" + nineFigureNumber, {
+                mode: 'cors'
+            }).then(function (response) {
+                return response.json();
             })
+            /*xr.get(self.baseURL + '/getSurveyMarkSketches', {
+                    markList: nineFigureNumber,
+                    returnDefective: true
+                })*/
             .then(function (jsonResponse) {
 
                 //Check for success - the messages element will not be present for success
@@ -456,11 +466,17 @@ SMESMarkStore.prototype.getSurveyMarkReportResponse = function (nineFigureNumber
     var self = this;
 
     return new Promise(function (resolve, reject) {
-        xr.get(self.baseURL + '/getSurveyMarkReports', {
+        /*xr.get(self.baseURL + '/getSurveyMarkReports', {
                 markList: nineFigureNumber,
                 returnDefective: true
-            })
-            .then(function (jsonResponse) {
+            })*/
+        fetch(self.baseURL + "/getSurveyMarkReports?returnDefective=true&markList=" + nineFigureNumber, {
+            mode: 'cors'
+        }).then(function (response) {
+            return response.json();
+        })
+
+        .then(function (jsonResponse) {
 
                 //Check for success - the messages element will not be present for success
                 if (typeof jsonResponse.messages === 'undefined') {
@@ -508,7 +524,7 @@ SMESMarkStore.prototype.base64toBlob = function (b64Data, contentType, sliceSize
     set-up markers and and infor windows
 */
 
-/*global Promise, google, document, navigator, console, MapLabel*/
+/*global Promise, google, document, navigator, console, MapLabel, InfoBox*/
 
 /** 
  * 
@@ -556,6 +572,20 @@ var SMESGMap = function (elementId, options) {
     this.map = new google.maps.Map(document.getElementById(elementId), this.mapOptions);
     this.geocoder = new google.maps.Geocoder();
     this.infoWindow = new google.maps.InfoWindow();
+    this.infoBox = new InfoBox({
+        content: document.getElementById("infobox"),
+        disableAutoPan: false,
+        maxWidth: 400,
+        pixelOffset: new google.maps.Size(-200, 0),
+        zIndex: 6,
+        /*boxStyle: {
+            background: "url('http://google-maps-utility-library-v3.googlecode.com/svn/trunk/infobox/examples/tipbox.gif') no - repeat",
+            opacity: 0.75 //,
+                //width: "280px"
+        },*/
+        closeBoxURL: "",
+        infoBoxClearance: new google.maps.Size(4, 4)
+    });
 
     var self = this;
 
@@ -594,6 +624,21 @@ var SMESGMap = function (elementId, options) {
         });
 
     }
+
+    /* Enable custom styling when the infowindow is displayed*/
+    var lInfoBox = self.infoBox;
+    google.maps.event.addListener(lInfoBox, 'domready', function () {
+        var closeButt = document.getElementById("close-info-box");
+
+        if (closeButt) {
+            closeButt.addEventListener("click", function () {
+                lInfoBox.setVisible(false);
+                self.resetSelectedMarker();
+            });
+        }
+
+
+    });
 
 
     //Attempt oto move map to current user coordinates
@@ -671,8 +716,15 @@ SMESGMap.prototype.addMarker = function (marker) {
 
 
     mapMarker.addListener('click', function () {
-        self.infoWindow.setContent(mapMarker.infoContent); //infoWindowContent);
-        self.infoWindow.open(self.map, this);
+        //self.infoWindow.setContent(mapMarker.infoContent); //infoWindowContent);
+        //self.infoWindow.open(self.map, this);
+        var infoBoxEl = document.getElementById("infobox");
+        infoBoxEl.innerHTML = mapMarker.infoContent;
+        self.setSelectedMarker(mapMarker);
+        self.infoBox.open(self.map, this);
+        self.infoBox.setVisible(true);
+        self.map.panTo(mapMarker.position);
+
 
         if (eventListeners && eventListeners.click) {
             eventListeners.click.apply();
@@ -737,6 +789,59 @@ SMESGMap.prototype.updateMarker = function (marker) {
         if (self.markers[j].nineFigureNo === nineFigureNo) {
             self.markers.splice(j, 1);
             break;
+        }
+    }
+
+};
+
+SMESGMap.prototype.setSelectedMarker = function (marker) {
+    "use strict";
+
+    var self = this;
+    var icon = marker.icon;
+    var url = icon.url;
+    var newSize;
+
+    self.resetSelectedMarker();
+
+    //Ensure that the shadow version isn't already referenced
+    url = url.replace("selected-", "");
+
+    var lastSlash = url.lastIndexOf("/");
+
+    url = url.substr(0, lastSlash + 1) + "selected-" + url.substr(lastSlash + 1);
+
+    newSize = self.markerSize * 2;
+    icon.scaledSize = new google.maps.Size(newSize, newSize);
+    icon.size = new google.maps.Size(newSize, newSize);
+    icon.url = url;
+
+    marker.setIcon(icon);
+    marker.isSelected = true;
+};
+
+SMESGMap.prototype.resetSelectedMarker = function () {
+    "use strict";
+
+    var self = this;
+    var icon, url;
+
+    for (var i = 0; i < self.markers.length; i++) {
+
+        //Check if icon is larger and reset as necessary
+        if (self.markers[i].isSelected) {
+            icon = self.markers[i].icon;
+            url = icon.url;
+
+            //Ensure that the shadow version isn't referenced anymore for image
+            url = url.replace("selected-", "");
+
+            icon.scaledSize = new google.maps.Size(self.markerSize, self.markerSize);
+            icon.size = new google.maps.Size(self.markerSize, self.markerSize);
+            icon.url = url;
+
+            self.markers[i].setIcon(icon);
+            delete self.markers[i].isSelected;
         }
     }
 
@@ -840,6 +945,10 @@ SMESGMap.prototype.resizeIcons = function () {
         icon = self.markers[markerCounter].icon;
         newSize = self.markerSize || 14;
 
+        if (self.markers[markerCounter].isSelected) {
+            newSize = newSize * 2;
+        }
+
         icon.scaledSize = new google.maps.Size(newSize, newSize);
         icon.size = new google.maps.Size(newSize, newSize);
 
@@ -929,12 +1038,11 @@ SMESGMap.prototype.reverseGeocode = function (cLat, cLng) {
     });
 };
 
-SMESGMap.prototype.setUpAutoComplete = function (elementId, clearButtonId) {
+SMESGMap.prototype.setUpAutoComplete = function (elementId) {
     "use strict";
 
     var self = this;
     var input = document.getElementById(elementId);
-    var clearButton = document.getElementById(clearButtonId);
     var searchInfoWindow = new google.maps.InfoWindow();
 
     var searchMarker = new google.maps.Marker({
@@ -946,28 +1054,14 @@ SMESGMap.prototype.setUpAutoComplete = function (elementId, clearButtonId) {
     self.autoComplete.bindTo('bounds', self.map);
 
 
-    input.addEventListener('input', function () {
-        input.classList.remove("not-found");
-        if (input.value === "") {
-            clearButton.classList.add("hidden");
-        } else {
-            clearButton.classList.remove("hidden");
-        }
-
-    });
-
     self.autoComplete.addListener('place_changed', function () {
-
         searchInfoWindow.close();
         searchMarker.setVisible(false);
         var place = self.autoComplete.getPlace();
 
         if (!place.geometry) {
-            input.classList.add("not-found");
             return;
         }
-
-        input.classList.remove("not-found");
 
         // If the place has a geometry, then present it on a map.
         if (place.geometry.viewport) {
@@ -1740,7 +1834,7 @@ SMESGMap.prototype.setupMapStyles = function () {
 
 
 //Variables for display
-var mapSpinner;
+var loader;
 var locateButton;
 var zoomInMsg;
 var errorMsg;
@@ -1759,7 +1853,7 @@ var currentRadius;
 
 window.addEventListener('load', function (e) {
 
-    mapSpinner = document.querySelector("[id=map-spinner]");
+    loader = document.querySelector("[id=loader]");
     zoomInMsg = document.querySelector("[id=zoom-in-msg]");
     errorMsg = document.querySelector("[id=error-msg]");
     locateButton = document.querySelector("[id=locate]");
@@ -1819,11 +1913,21 @@ function requestMarkInformation() {
     mapCenter = smesMap.map.getCenter();
     radius = smesMap.mapSize || 2;
 
+    showLoader();
+
     console.log("requestMarkInformation");
 
     markStore.requestMarkInformation(mapCenter.lat(), mapCenter.lng(), radius, loadMarks, displayZoomMessage);
     console.log(markStore.newIndex);
 
+}
+
+function showLoader() {
+    loader.classList.remove("hidden");
+}
+
+function hideLoader() {
+    loader.classList.add("hidden");
 }
 
 
@@ -1843,17 +1947,25 @@ function displayZoomMessage() {
     } else {
         zoomInMsg.classList.add("hidden");
     }
+    hideLoader();
 }
 
 function loadMarks() {
     //Work through the new markers and add to the map, then work through updated markers and update on the map
-    var surveyMark, address, markType, navigateString, infoWindowContent, contentSDiv, contentMDiv, contentEDiv;
+    var surveyMark, address, markType, navigateString, infoWindowContent, contentSDiv, contentMDiv, contentEDiv, closeButton, cardDiv;
 
     console.log("loadMarks");
 
     contentSDiv = '<div class="card-content"><div class="card-left">';
     contentMDiv = '</div><div class="card-value">';
     contentEDiv = '</div></div>';
+
+    closeButton = '<button id="close-info-box" class="close-button mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--icon">' +
+        '<i class="material-icons">close</i>' +
+        '</button>';
+
+    cardDiv = '<div class="mdl-card infobox mdl-shadow--3dp overflow-x-visible">';
+
 
 
     //Add new marks
@@ -1900,6 +2012,26 @@ function loadMarks() {
             navigateString +
             '</div>';
 
+        infoWindowContent = cardDiv + '<div class="mdl-card__title mdl-color-text--white">' +
+            '<div class="header-text">' +
+            '<div class="nine-figure">' + surveyMark.nineFigureNumber + '</div>' +
+            '<div><h2 class="mdl-card__title-text">' + surveyMark.name + '</h2></div>' +
+            '<div class="mark-name">' + markType.markDetails + '</div>' +
+            '</div>' +
+            closeButton +
+            '</div>' +
+            '<div class="mdl-card__supporting-text">' +
+            '<div>Zone: ' + surveyMark.zone + '</div>' +
+            '<div>Easting: ' + surveyMark.easting + '</div>' +
+            '<div>Northing: ' + surveyMark.northing + '</div>' +
+            '<div>AHD Height: ' + surveyMark.ahdHeight + '</div>' +
+            '<div>Ellipsoid Height: ' + surveyMark.ellipsoidHeight + '</div>' +
+            '<div>GDA94 Technique: ' + surveyMark.gda94Technique + '</div>' +
+            '<div>AHD Technique: ' + surveyMark.ahdTechnique + '</div>' +
+            '</div><div class="mdl-card__actions mdl-card--border">' +
+            '<button id="sketch' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-color-text--primary smes-button fade-in">Sketch</button>' +
+            '<button id="report' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-color-text--primary smes-button fade-in">Report</button>' +
+            '</div></div>';
 
         marker.lat = surveyMark.latitude;
         marker.lng = surveyMark.longitude;
@@ -2004,7 +2136,7 @@ function markClickHandler(nineFigureNumber, lat, lng) {
 
                         addressDiv.innerHTML = result;
 
-                        markStore.updateAddress(currentNineFigureNumber, result);
+                        markStore.setAddress(currentNineFigureNumber, result);
 
                     }
                 });
