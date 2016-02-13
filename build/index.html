@@ -10,7 +10,26 @@
     <title id="bar-title">SMES On The Go</title>
 
     <meta name="application-name" content="SMES On The Go" />
-    <link rel="icon" href="favicon.ico" />
+    <link rel="apple-touch-icon-precomposed" sizes="57x57" href="apple-touch-icon-57x57.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="114x114" href="apple-touch-icon-114x114.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="72x72" href="apple-touch-icon-72x72.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="apple-touch-icon-144x144.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="60x60" href="apple-touch-icon-60x60.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="120x120" href="apple-touch-icon-120x120.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="76x76" href="apple-touch-icon-76x76.png" />
+    <link rel="apple-touch-icon-precomposed" sizes="152x152" href="apple-touch-icon-152x152.png" />
+    <link rel="icon" type="image/png" href="favicon-196x196.png" sizes="196x196" />
+    <link rel="icon" type="image/png" href="favicon-96x96.png" sizes="96x96" />
+    <link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
+    <link rel="icon" type="image/png" href="favicon-16x16.png" sizes="16x16" />
+    <link rel="icon" type="image/png" href="favicon-128.png" sizes="128x128" />
+    <meta name="msapplication-TileColor" content="#FFFFFF" />
+    <meta name="msapplication-TileImage" content="mstile-144x144.png" />
+    <meta name="msapplication-square70x70logo" content="mstile-70x70.png" />
+    <meta name="msapplication-square150x150logo" content="mstile-150x150.png" />
+    <meta name="msapplication-wide310x150logo" content="mstile-310x150.png" />
+    <meta name="msapplication-square310x310logo" content="mstile-310x310.png" />
+
 
     <link href="https://fonts.googleapis.com/css?family=Roboto:regular,bold,italic,thin,light,bolditalic,black,medium&amp;lang=en" rel="stylesheet">
     <link href='https://fonts.googleapis.com/css?family=Muli' rel='stylesheet' type='text/css'>
@@ -32,15 +51,34 @@
         <div id="layout-drawer" class="mdl-layout__drawer">
             <span class="mdl-layout-title">SMES On The Go</span>
             <nav class="mdl-navigation">
-                <div>
-                    <div class="">Cache mark information</div>
-                    <div class="">Retain mark information for 7 days</div>
-                </div><span>Map style</span>
-                <span>Cool grey</span>
-                <div>
+
+                <div id="nav-map" class="mdl-navigation__link">
+                    <div class="map-style-flex">
+                        <div class="map-style-title">Style:</div>
+                        <div class="map-style">
+                            <span id="map-style-name" class="map-style">Iovation</span>
+                            <button id="map-style-drop-down" class="mdl-button mdl-js-button mdl-button--icon right-button">
+                                <i class="material-icons">arrow_drop_down</i>
+                            </button>
+                        </div>
+
+                    </div>
+                    <ul id="style-option-list" class="mdl-menu mdl-menu--bottom-right mdl-js-menu mdl-js-ripple-effect" for="map-style-drop-down">
+                        <li id="ultralight" class="mdl-menu__item">Ultra light</li>
+                        <li id="coolgrey" class="mdl-menu__item">Cool grey</li>
+                        <li id="darkgrey" class="mdl-menu__item">Dark grey</li>
+                        <li id="shiftworker" class="mdl-menu__item">Shift worker</li>
+                        <li id="simplelight" class="mdl-menu__item">Simple light</li>
+                        <li id="iovation" class="mdl-menu__item">Iovation</li>
+                        <li id="muted" class="mdl-menu__item">Muted</li>
+                        <li id="paledawn" class="mdl-menu__item">Pale dawn</li>
+                        <li id="google" class="mdl-menu__item">Google</li>
+                    </ul>
                 </div>
+                <div id="nav-about" class="mdl-navigation__link about-link">About SMES On The Go</div>
             </nav>
         </div>
+
 
         <main>
             <div id="page-content">
@@ -84,21 +122,55 @@
 
                 </div>
             </div>
+            <div id="screen-overlay" class="screen-overlay hidden">
+                <div class="mdl-card about-box mdl-shadow--3dp overflow-x-visible">
+                    <div class="mdl-card__title mdl-color-text--white about-title">
+                        ABOUT SMES ON THE GO
+                    </div>
+                    <div class="mdl-card__supporting-text about-text">
+                        <div>
+                            SMES On The Go is free and open source software. The source is available at:
+                            <br>&nbsp;&nbsp;&nbsp;&nbsp;
+                            <a href="https://github.com/mrpeel/smes-on-the-go">https://github.com/mrpeel/smes-on-the-go</a>
+                            <br>
+                            <br>
+
+                        </div>
+                        <div class="about-content-header">Open Source Licence</div>
+                        <div>
+                            The MIT License (MIT)
+                            <br>
+                            <br> Copyright (c) 2016 Neil Kloot
+                            <br>
+                            <br> Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+                            <br>
+                            <br> The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+                            <br>
+                            <br> THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+                        </div>
+                    </div>
+                    <div class="mdl-card__actions mdl-card--border">
+                        <div class="about-actions"></div>
+                        <button id="about-OK" class="mdl-button mdl-js-button mdl-js-ripple-effect smes-button about-button fade-in">OK</button>
+                    </div>
+                </div>
+
+            </div>
+
 
         </main>
-    </div>
 
-    <script>
-        // If Promise and/or fetch are not supported, include the polyfill
-        window.Promise || document.write("<script src=Promise.min.js><\/script>");
-        window.fetch || document.write("<script src=fetch.min.js><\/script>");
+        <script>
+            // If Promise and/or fetch are not supported, include the polyfill
+            window.Promise || document.write("<script src=Promise.min.js><\/script>");
+            window.fetch || document.write("<script src=fetch.min.js><\/script>");
 
-    </script>
+        </script>
 
-    <script src="https://storage.googleapis.com/code.getmdl.io/1.0.6/material.min.js"></script>
-    <script src="https://maps.google.com/maps/api/js?key=AIzaSyC2nLsr9KX6pMcwmYH-LY-JqVwByPmaTfM&libraries=places"></script>
-    <script src="sotg-lib.min.js"></script>
-    <script src="smes-on-the-go.js"></script>
+        <script src="https://storage.googleapis.com/code.getmdl.io/1.0.6/material.min.js"></script>
+        <script src="https://maps.google.com/maps/api/js?key=AIzaSyC2nLsr9KX6pMcwmYH-LY-JqVwByPmaTfM&libraries=places"></script>
+        <script src="sotg-lib.min.js"></script>
+        <script src="smes-on-the-go.js"></script>
 
 </body>
 

@@ -8,6 +8,7 @@ var zoomInMsg;
 var errorMsg;
 var mobileOS;
 var elTimer;
+var overlayEl;
 
 var smesMap;
 var markStore;
@@ -28,17 +29,63 @@ window.addEventListener('load', function (e) {
     locateButton.addEventListener("click", geoLocate, false);
     document.getElementById("hamburger-menu").addEventListener("click", showDrawer, false);
     document.getElementById("clear-search").addEventListener("click", clearSearch, false);
+    document.getElementById("nav-about").addEventListener("click", showAbout, false);
+    document.getElementById("about-OK").addEventListener("click", hideAbout, false);
+
+    overlayEl = document.getElementById("screen-overlay");
+
 
     setupMap();
+
+    var styleList = document.getElementById("style-option-list");
+
+    //Set-up map style click handlers
+    for (var i = 0; i < styleList.childNodes.length; i++) {
+        if (styleList.childNodes[i].nodeType === 1) {
+            createMapClickHandler(styleList.childNodes[i].id, styleList.childNodes[i].textContent);
+        }
+
+        //Reset map-style text if required
+        if (smesMap.mapStyleName && smesMap.mapStyleName === styleList.childNodes[i].id) {
+            document.getElementById("map-style-name").textContent = styleList.childNodes[i].textContent;
+
+        }
+    }
+
     geoLocate();
 
 
 }, false);
 
 
+function createMapClickHandler(elementName, elementText) {
+    var el = document.getElementById(elementName);
+    el.addEventListener("click", function () {
+        smesMap.changeMapStyle(elementName);
+        document.getElementById("map-style-name").textContent = elementText;
+    });
+}
+
 function showDrawer() {
     var layout = document.querySelector('.mdl-layout');
-    layout.MaterialLayout.drawerToggleHandler_();
+    if (layout) {
+        layout.MaterialLayout.drawerToggleHandler_();
+    }
+
+}
+
+function showAbout() {
+
+    if (overlayEl) {
+        overlayEl.classList.remove("hidden");
+    }
+}
+
+function hideAbout() {
+
+    if (overlayEl) {
+        overlayEl.classList.add("hidden");
+    }
 }
 
 function clearSearch() {
@@ -120,19 +167,19 @@ function displayZoomMessage() {
 
 function loadMarks() {
     //Work through the new markers and add to the map, then work through updated markers and update on the map
-    var surveyMark, address, markType, navigateString, infoWindowContent, contentSDiv, contentMDiv, contentEDiv, closeButton, cardDiv;
+    var surveyMark, address, markType, navigateString, infoWindowContent;
 
     console.log("loadMarks");
 
-    contentSDiv = '<div class="card-content"><div class="card-left">';
-    contentMDiv = '</div><div class="card-value">';
-    contentEDiv = '</div></div>';
-
-    closeButton = '<button id="close-info-box" class="close-button mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--icon">' +
+    var closeButton = '<button id="close-info-box" class="close-button mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--icon">' +
         '<i class="material-icons">close</i>' +
         '</button>';
 
-    cardDiv = '<div class="mdl-card infobox mdl-shadow--3dp overflow-x-visible">';
+    var cardDiv = '<div class="mdl-card infobox mdl-shadow--3dp overflow-x-visible">';
+    var contentSDiv = '<div class="card-content"><div class="card-left">';
+    var contentMDiv = '</div><div class="card-value">';
+    var contentEDiv = '</div></div>';
+
 
 
 
@@ -154,51 +201,59 @@ function loadMarks() {
         }
 
 
-        eventListeners.domready = domReadyHandler(surveyMark.nineFigureNumber);
+        eventListeners.domready = domReadyHandler(surveyMark.nineFigureNumber, surveyMark.name);
         eventListeners.click = markClickHandler(surveyMark.nineFigureNumber, parseFloat(surveyMark.latitude), parseFloat(surveyMark.longitude));
 
 
-        infoWindowContent = '<div class="info-window-header">' +
-            '<div class="header-text secion__text">' +
-            '<div class="nine-figure">' + surveyMark.nineFigureNumber + '</div>' +
-            '<div class="mark-name"><h6>' + surveyMark.name + '</h6></div>' +
-            '<div class="mark-status"><div>' + markType.markDetails + '</div>' +
-            '</div></div>' +
+        infoWindowContent = cardDiv + '<div class="mdl-card__title mdl-color-text--white">' +
+            '<div class="info-window-header">' +
             '<div class="section__circle-container">' +
             '<div class="section__circle-container__circle card-symbol"> ' +
             '<img class="info-symbol" src="symbology/' + markType.iconName + '.svg">' +
-            '</div></div></div>' +
-            '<div id="address' + surveyMark.nineFigureNumber + '"></div>' +
-            contentSDiv + 'AHD height:' + contentMDiv + surveyMark.ahdHeight + contentEDiv +
-            contentSDiv + 'Ellipsoid height:' + contentMDiv + surveyMark.ellipsoidHeight + contentEDiv +
-            contentSDiv + 'GDA94 technique:' + contentMDiv + surveyMark.gda94Technique + contentEDiv +
-            contentSDiv + 'AHD technique:' + contentMDiv + surveyMark.ahdTechnique + contentEDiv +
-            contentSDiv + 'MGA:' + contentMDiv + surveyMark.zone + ', ' + surveyMark.easting + ', ' + surveyMark.northing + contentEDiv +
-            '<div class = "button-section">' +
-            '<button id="sketch' + surveyMark.nineFigureNumber + '" class="smes-button mdl-button mdl-js-button mdl-js-ripple-effect fade-in">Sketch</button>' +
-            '<button id="report' + surveyMark.nineFigureNumber + '" class="smes-button mdl-button mdl-js-button mdl-js-ripple-effect fade-in">Report</button>' +
-            navigateString +
-            '</div>';
-
-        infoWindowContent = cardDiv + '<div class="mdl-card__title mdl-color-text--white">' +
+            '</div>' +
+            '</div>' +
             '<div class="header-text">' +
             '<div class="nine-figure">' + surveyMark.nineFigureNumber + '</div>' +
-            '<div><h2 class="mdl-card__title-text">' + surveyMark.name + '</h2></div>' +
-            '<div class="mark-name">' + markType.markDetails + '</div>' +
+            '<div><h3 class="mdl-card__title-text">' + surveyMark.name + '</h3></div>' +
+            '<div class="mark-status">' + markType.markDetails + '</div>' +
+            '</div>' +
             '</div>' +
             closeButton +
             '</div>' +
+            '<div id="info-box-loader" class="mdl-progress mdl-js-progress mdl-progress__indeterminate"></div>' +
             '<div class="mdl-card__supporting-text">' +
-            '<div>Zone: ' + surveyMark.zone + '</div>' +
-            '<div>Easting: ' + surveyMark.easting + '</div>' +
-            '<div>Northing: ' + surveyMark.northing + '</div>' +
-            '<div>AHD Height: ' + surveyMark.ahdHeight + '</div>' +
-            '<div>Ellipsoid Height: ' + surveyMark.ellipsoidHeight + '</div>' +
-            '<div>GDA94 Technique: ' + surveyMark.gda94Technique + '</div>' +
-            '<div>AHD Technique: ' + surveyMark.ahdTechnique + '</div>' +
-            '</div><div class="mdl-card__actions mdl-card--border">' +
-            '<button id="sketch' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-color-text--primary smes-button fade-in">Sketch</button>' +
-            '<button id="report' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-color-text--primary smes-button fade-in">Report</button>' +
+            '<div id="address' + surveyMark.nineFigureNumber + '"></div>' +
+
+            '<div class="content-section">' +
+            '<div class="content-icon"><i class="material-icons">swap_horiz</i></div>' +
+            '<div class="content">' +
+            contentSDiv + 'LL94:' + contentMDiv + surveyMark.latitude + ', ' + surveyMark.longitude + contentEDiv +
+            contentSDiv + 'MGA:' + contentMDiv + surveyMark.zone + ', ' + surveyMark.easting + ', ' + surveyMark.northing + contentEDiv +
+            contentSDiv + 'GDA94 technique:' + contentMDiv + surveyMark.gda94Technique + contentEDiv +
+            contentSDiv + 'Ellipsoid height:' + contentMDiv + surveyMark.ellipsoidHeight + contentEDiv +
+            contentSDiv + 'Uncertainty:' + contentMDiv + surveyMark.hUncertainty + contentEDiv +
+            contentSDiv + 'Order:' + contentMDiv + surveyMark.hOrder + contentEDiv +
+            contentSDiv + 'GDA94 measurements:' + contentMDiv + surveyMark.gda94Measurements + contentEDiv +
+            '</div>' +
+            '</div>' +
+            '<div class="vert-spacer"></div>' +
+
+            '<div class="content-section">' +
+            '<div class="content-icon"><i class="material-icons">swap_vert</i></div>' +
+            '<div class="content">' +
+            contentSDiv + 'AHD height:' + contentMDiv + surveyMark.ahdHeight + contentEDiv +
+            contentSDiv + 'AHD technique:' + contentMDiv + surveyMark.ahdTechnique + contentEDiv +
+            contentSDiv + 'AHD uncertainty:' + contentMDiv + surveyMark.vUncertainty + contentEDiv +
+            contentSDiv + 'AHD order:' + contentMDiv + surveyMark.vOrder + contentEDiv +
+            contentSDiv + 'AHD level section:' + contentMDiv + surveyMark.ahdLevelSection + contentEDiv +
+            '</div>' +
+            '</div>' +
+
+            '</div>' +
+            '<div class="mdl-card__actions mdl-card--border">' +
+            '<div class="horiz-spacer"></div>' +
+            '<button id="sketch' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-js-ripple-effect smes-button fade-in">Sketch</button>' +
+            '<button id="report' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-js-ripple-effect smes-button fade-in">Report</button>' +
             '</div></div>';
 
         marker.lat = surveyMark.latitude;
@@ -232,30 +287,56 @@ function loadMarks() {
         markType = returnMarkType(surveyMark);
 
 
-        infoWindowContent = '<div class="info-window-header">' +
-            '<div class="section__circle-container mdl-cell mdl-cell--2-col mdl-cell--1-col-phone">' +
+        infoWindowContent = cardDiv + '<div class="mdl-card__title mdl-color-text--white">' +
+            '<div class="info-window-header">' +
+            '<div class="section__circle-container">' +
             '<div class="section__circle-container__circle card-symbol"> ' +
             '<img class="info-symbol" src="symbology/' + markType.iconName + '.svg">' +
             '</div>' +
             '</div>' +
-            '<div class="section__text mdl-cell mdl-cell--6-col-desktop mdl-cell--4-col-tablet mdl-cell--4-col-phone">' +
+            '<div class="header-text">' +
             '<div class="nine-figure">' + surveyMark.nineFigureNumber + '</div>' +
-            '<div class="mark-name">' + surveyMark.name + '</div>' +
-            '<div class="mark-status"><div>' + markType.markDetails + '</div>' +
-            '</div></div>' +
-            '<div class="mdl-cell mdl-cell--8-col mdl-cell--5-col-phone">' +
-            '<div id="address' + surveyMark.nineFigureNumber + '"></div></div>' +
-            contentSDiv + 'AHD height:' + contentMDiv + surveyMark.ahdHeight + contentEDiv +
-            contentSDiv + 'Ellipsoid height:' + contentMDiv + surveyMark.ellipsoidHeight + contentEDiv +
-            contentSDiv + 'GDA94 technique:' + contentMDiv + surveyMark.gda94Technique + contentEDiv +
-            contentSDiv + 'AHD technique:' + contentMDiv + surveyMark.ahdTechnique + contentEDiv +
-            contentSDiv + 'MGA:' + contentMDiv + surveyMark.zone + ', ' + surveyMark.easting + ', ' + surveyMark.northing + contentEDiv +
+            '<div><h3 class="mdl-card__title-text">' + surveyMark.name + '</h3></div>' +
+            '<div class="mark-status">' + markType.markDetails + '</div>' +
             '</div>' +
-            '<div class = "button-section">' +
-            '<button id="sketch' + surveyMark.nineFigureNumber + '" class="smes-button mdl-button mdl-js-button mdl-js-ripple-effect fade-in">Sketch</button>' +
-            '<button id="report' + surveyMark.nineFigureNumber + '" class="smes-button mdl-button mdl-js-button mdl-js-ripple-effect fade-in">Report</button>' +
-            navigateString +
-            '</div>';
+            '</div>' +
+            closeButton +
+            '</div>' +
+            '<div id="info-box-loader" class="mdl-progress mdl-js-progress mdl-progress__indeterminate"></div>' +
+            '<div class="mdl-card__supporting-text">' +
+            '<div id="address' + surveyMark.nineFigureNumber + '"></div>' +
+
+            '<div class="content-section">' +
+            '<div class="content-icon"><i class="material-icons">swap_horiz</i></div>' +
+            '<div class="content">' +
+            contentSDiv + 'LL94:' + contentMDiv + surveyMark.latitude + ', ' + surveyMark.longitude + contentEDiv +
+            contentSDiv + 'MGA:' + contentMDiv + surveyMark.zone + ', ' + surveyMark.easting + ', ' + surveyMark.northing + contentEDiv +
+            contentSDiv + 'GDA94 technique:' + contentMDiv + surveyMark.gda94Technique + contentEDiv +
+            contentSDiv + 'Ellipsoid height:' + contentMDiv + surveyMark.ellipsoidHeight + contentEDiv +
+            contentSDiv + 'Uncertainty:' + contentMDiv + surveyMark.hUncertainty + contentEDiv +
+            contentSDiv + 'Order:' + contentMDiv + surveyMark.hOrder + contentEDiv +
+            contentSDiv + 'GDA94 measurements:' + contentMDiv + surveyMark.gda94Measurements + contentEDiv +
+            '</div>' +
+            '</div>' +
+            '<div class="vert-spacer"></div>' +
+
+            '<div class="content-section">' +
+            '<div class="content-icon"><i class="material-icons">swap_vert</i></div>' +
+            '<div class="content">' +
+            contentSDiv + 'AHD height:' + contentMDiv + surveyMark.ahdHeight + contentEDiv +
+            contentSDiv + 'AHD technique:' + contentMDiv + surveyMark.ahdTechnique + contentEDiv +
+            contentSDiv + 'AHD uncertainty:' + contentMDiv + surveyMark.vUncertainty + contentEDiv +
+            contentSDiv + 'AHD order:' + contentMDiv + surveyMark.vOrder + contentEDiv +
+            contentSDiv + 'AHD level section:' + contentMDiv + surveyMark.ahdLevelSection + contentEDiv +
+            '</div>' +
+            '</div>' +
+
+            '</div>' +
+            '<div class="mdl-card__actions mdl-card--border">' +
+            '<div class="horiz-spacer"></div>' +
+            '<button id="sketch' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-js-ripple-effect smes-button fade-in">Sketch</button>' +
+            '<button id="report' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-js-ripple-effect smes-button fade-in">Report</button>' +
+            '</div></div>';
 
 
 
@@ -318,29 +399,56 @@ function markClickHandler(nineFigureNumber, lat, lng) {
 
 }
 
-function domReadyHandler(nineFigureNumber) {
+function showBoxLoader() {
+    var lEl = document.getElementById("info-box-loader");
+
+    if (lEl) {
+        lEl.classList.remove("hidden");
+    }
+}
+
+function hideBoxLoader() {
+    var lEl = document.getElementById("info-box-loader");
+
+    if (lEl) {
+        lEl.classList.add("hidden");
+    }
+}
+
+function domReadyHandler(nineFigureNumber, markName) {
+
+    var downloadName = markName.replace(/  +/g, ' ');
+
     return function () {
         document.querySelector("[id=sketch" + nineFigureNumber + "]").addEventListener("click", function () {
             console.log('Sketch: ' + nineFigureNumber);
 
+            showBoxLoader();
+
             markStore.getSurveyMarkSketchResponse(nineFigureNumber).then(function (pdfData) {
                 var blob = markStore.base64toBlob(pdfData.document, 'application/pdf');
 
-                saveAs(blob, nineFigureNumber + '-sketch.pdf');
+                saveAs(blob, downloadName + '(' + nineFigureNumber + ') Sketch.pdf');
+                hideBoxLoader();
             }).catch(function (error) {
                 console.log("PDF retrieval failed");
+                hideBoxLoader();
             });
 
         }, false);
         document.querySelector("[id=report" + nineFigureNumber + "]").addEventListener("click", function () {
             console.log('Report: ' + nineFigureNumber);
 
+            showBoxLoader();
+
             markStore.getSurveyMarkReportResponse(nineFigureNumber).then(function (pdfData) {
                 var blob = markStore.base64toBlob(pdfData.document, 'application/pdf');
 
-                saveAs(blob, nineFigureNumber + '-report.pdf');
+                saveAs(blob, downloadName + '(' + nineFigureNumber + ') Report.pdf');
+                hideBoxLoader();
             }).catch(function (error) {
                 console.log("PDF retrieval failed");
+                hideBoxLoader();
             });
 
         }, false);

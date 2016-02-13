@@ -1,13 +1,10 @@
-/** GooMap class encapsulating the maps functionality required to load a map with custom controls,
+/** SMESGMap class encapsulating the maps functionality required to load a map with custom controls,
     set-up markers and and infor windows
 */
 
-/*global Promise, google, document, navigator, console, MapLabel, InfoBox*/
+/*global Promise, google, document, navigator, console, MapLabel, InfoBox, window*/
 
 /** 
- * 
- * PassOff uses BKDF2 to generate salted password and HMAC256 to generate a seed.  The seed is then ued to generate a password based on
-    a chosen template.
  */
 var SMESGMap = function (elementId, options) {
     "use strict";
@@ -53,8 +50,8 @@ var SMESGMap = function (elementId, options) {
     this.infoBox = new InfoBox({
         content: document.getElementById("infobox"),
         disableAutoPan: false,
-        maxWidth: 400,
-        pixelOffset: new google.maps.Size(-200, 0),
+        maxWidth: 440,
+        pixelOffset: new google.maps.Size(-220, 0),
         zIndex: 6,
         /*boxStyle: {
             background: "url('http://google-maps-utility-library-v3.googlecode.com/svn/trunk/infobox/examples/tipbox.gif') no - repeat",
@@ -64,6 +61,8 @@ var SMESGMap = function (elementId, options) {
         closeBoxURL: "",
         infoBoxClearance: new google.maps.Size(4, 4)
     });
+
+    this.getMapPreference();
 
     var self = this;
 
@@ -103,7 +102,7 @@ var SMESGMap = function (elementId, options) {
 
     }
 
-    /* Enable custom styling when the infowindow is displayed*/
+    /* Enable custom styling when the infobox is displayed*/
     var lInfoBox = self.infoBox;
     google.maps.event.addListener(lInfoBox, 'domready', function () {
         var closeButt = document.getElementById("close-info-box");
@@ -122,6 +121,58 @@ var SMESGMap = function (elementId, options) {
     //Attempt oto move map to current user coordinates
     self.geoLocate();
 
+
+};
+
+SMESGMap.prototype.localStorageAvailable = function () {
+    "use strict";
+
+    try {
+        var storage = window.localStorage,
+            x = '__storage_test__';
+        storage.setItem(x, x);
+        storage.removeItem(x);
+        return true;
+    } catch (e) {
+        return false;
+    }
+};
+
+SMESGMap.prototype.getMapPreference = function () {
+    "use strict";
+
+    var storedData,
+        self = this;
+
+    if (!self.localStorageAvailable) {
+        return;
+    }
+
+    storedData = window.localStorage.getItem('map-style');
+
+    if (storedData) {
+        self.changeMapStyle(storedData);
+        self.mapStyleName = storedData;
+    }
+
+
+};
+
+
+SMESGMap.prototype.saveStylePreference = function (stlyeName) {
+    "use strict";
+
+    if (!this.localStorageAvailable) {
+        return;
+    }
+
+
+    try {
+        window.localStorage.setItem('map-style', stlyeName);
+    } catch (e) {
+        //Give up
+        console.log("Write to local storage failed");
+    }
 
 };
 
@@ -208,9 +259,13 @@ SMESGMap.prototype.addMarker = function (marker) {
             eventListeners.click.apply();
         }
 
+        //Make sure that this doesn't fire before the rendering has completed
         if (eventListeners && eventListeners.domready) {
-            eventListeners.domready.apply(this);
+            window.setTimeout(function () {
+                eventListeners.domready.apply(this);
+            }, 0);
         }
+
 
     });
 
@@ -631,6 +686,25 @@ SMESGMap.prototype.calcRad = function (x) {
     return x * Math.PI / 180;
 };
 
+SMESGMap.prototype.changeMapStyle = function (styleName) {
+    "use strict";
+
+    var self = this;
+    var styleDetails;
+
+    self.mapStyleName = styleName;
+
+    if (styleName !== "google" && self.mapStyles[styleName]) {
+        styleDetails = self.mapStyles[styleName];
+    }
+
+    self.map.setOptions({
+        styles: styleDetails
+    });
+
+    self.saveStylePreference(styleName);
+};
+
 /**
   Map stlyes for use with Google maps
 **/
@@ -638,7 +712,7 @@ SMESGMap.prototype.setupMapStyles = function () {
     "use strict";
 
     this.mapStyles = {
-        coolGrey: [{
+        coolgrey: [{
             "featureType": "landscape",
             "elementType": "labels",
             "stylers": [{
@@ -694,7 +768,7 @@ SMESGMap.prototype.setupMapStyles = function () {
                 }]
             }],
 
-        darkGrey: [
+        darkgrey: [
             {
                 "featureType": "landscape",
                 "stylers": [
@@ -813,7 +887,7 @@ SMESGMap.prototype.setupMapStyles = function () {
     }
 ],
 
-        paleDawn: [{
+        paledawn: [{
             "featureType": "administrative",
             "elementType": "all",
             "stylers": [{
@@ -875,7 +949,7 @@ SMESGMap.prototype.setupMapStyles = function () {
     }]
 }],
 
-        shiftWorker: [{
+        shiftworker: [{
             "stylers": [{
                 "saturation": -100
     }, {
@@ -951,7 +1025,7 @@ SMESGMap.prototype.setupMapStyles = function () {
     }]
 }],
 
-        simpleLight: [{
+        simplelight: [{
             "featureType": "administrative",
             "elementType": "all",
             "stylers": [{
@@ -1303,7 +1377,123 @@ SMESGMap.prototype.setupMapStyles = function () {
     }, {
                 "gamma": "5.37"
     }]
-}]
+}],
+        ultralight: [{
+            "featureType": "water",
+            "elementType": "geometry",
+            "stylers": [{
+                "color": "#e9e9e9"
+            }, {
+                "lightness": 17
+            }]
+        }, {
+            "featureType": "landscape",
+            "elementType": "geometry",
+            "stylers": [{
+                "color": "#f5f5f5"
+            }, {
+                "lightness": 20
+            }]
+        }, {
+            "featureType": "road.highway",
+            "elementType": "geometry.fill",
+            "stylers": [{
+                "color": "#ffffff"
+            }, {
+                "lightness": 17
+            }]
+        }, {
+            "featureType": "road.highway",
+            "elementType": "geometry.stroke",
+            "stylers": [{
+                "color": "#ffffff"
+            }, {
+                "lightness": 29
+            }, {
+                "weight": 0.2
+            }]
+        }, {
+            "featureType": "road.arterial",
+            "elementType": "geometry",
+            "stylers": [{
+                "color": "#ffffff"
+            }, {
+                "lightness": 18
+            }]
+        }, {
+            "featureType": "road.local",
+            "elementType": "geometry",
+            "stylers": [{
+                "color": "#ffffff"
+            }, {
+                "lightness": 16
+            }]
+        }, {
+            "featureType": "poi",
+            "elementType": "geometry",
+            "stylers": [{
+                "color": "#f5f5f5"
+            }, {
+                "lightness": 21
+            }]
+        }, {
+            "featureType": "poi.park",
+            "elementType": "geometry",
+            "stylers": [{
+                "color": "#dedede"
+            }, {
+                "lightness": 21
+            }]
+        }, {
+            "elementType": "labels.text.stroke",
+            "stylers": [{
+                "visibility": "on"
+            }, {
+                "color": "#ffffff"
+            }, {
+                "lightness": 16
+            }]
+        }, {
+            "elementType": "labels.text.fill",
+            "stylers": [{
+                "saturation": 36
+            }, {
+                "color": "#333333"
+            }, {
+                "lightness": 40
+            }]
+        }, {
+            "elementType": "labels.icon",
+            "stylers": [{
+                "visibility": "off"
+            }]
+        }, {
+            "featureType": "transit",
+            "elementType": "geometry",
+            "stylers": [{
+                "color": "#f2f2f2"
+            }, {
+                "lightness": 19
+            }]
+        }, {
+            "featureType": "administrative",
+            "elementType": "geometry.fill",
+            "stylers": [{
+                "color": "#fefefe"
+            }, {
+                "lightness": 20
+            }]
+        }, {
+            "featureType": "administrative",
+            "elementType": "geometry.stroke",
+            "stylers": [{
+                "color": "#fefefe"
+            }, {
+                "lightness": 17
+            }, {
+                "weight": 1.2
+            }]
+        }]
     };
 
 };
