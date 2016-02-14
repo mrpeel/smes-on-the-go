@@ -2020,7 +2020,7 @@ SMESGMap.prototype.setupMapStyles = function () {
 
 };
 
-/*global xr, SMESGMap, SMESMarkStore, Promise, setTimeout, window, document, console, alert, ArrayBuffer, Uint8Array, Blob, saveAs, darkGrey, coolGrey, paleDawn, shiftWorker, simpleLight, muted, iovation, navigator, google, SMESMap, MarkStore */
+/*global xr, SMESGMap, SMESMarkStore, Promise, setTimeout, window, document, console, alert, ArrayBuffer, Uint8Array, Blob, saveAs, darkGrey, coolGrey, paleDawn, shiftWorker, simpleLight, muted, iovation, navigator, google, SMESMap, MarkStore, componentHandler */
 
 
 //Variables for display
@@ -2242,7 +2242,6 @@ function loadMarks() {
             '</div>' +
             closeButton +
             '</div>' +
-            '<div id="info-box-loader" class="mdl-progress mdl-js-progress mdl-progress__indeterminate"></div>' +
             '<div class="mdl-card__supporting-text">' +
             '<div id="address' + surveyMark.nineFigureNumber + '"></div>' +
 
@@ -2272,6 +2271,7 @@ function loadMarks() {
             '</div>' +
 
             '</div>' +
+            '<div id="info-box-loader" class="hidden mdl-progress mdl-js-progress mdl-progress__indeterminate"></div>' +
             '<div class="mdl-card__actions mdl-card--border">' +
             '<div class="horiz-spacer"></div>' +
             '<button id="sketch' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-js-ripple-effect smes-button fade-in">Sketch</button>' +
@@ -2324,7 +2324,6 @@ function loadMarks() {
             '</div>' +
             closeButton +
             '</div>' +
-            '<div id="info-box-loader" class="mdl-progress mdl-js-progress mdl-progress__indeterminate"></div>' +
             '<div class="mdl-card__supporting-text">' +
             '<div id="address' + surveyMark.nineFigureNumber + '"></div>' +
 
@@ -2354,6 +2353,7 @@ function loadMarks() {
             '</div>' +
 
             '</div>' +
+            '<div id="info-box-loader" class="hidden mdl-progress mdl-js-progress mdl-progress__indeterminate"></div>' +
             '<div class="mdl-card__actions mdl-card--border">' +
             '<div class="horiz-spacer"></div>' +
             '<button id="sketch' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-js-ripple-effect smes-button fade-in">Sketch</button>' +
@@ -2442,6 +2442,9 @@ function domReadyHandler(nineFigureNumber, markName) {
     var downloadName = markName.replace(/  +/g, ' ');
 
     return function () {
+        //Make sure any created mdl component is registered qith the mdl component handler
+        componentHandler.upgradeAllRegistered();
+
         document.querySelector("[id=sketch" + nineFigureNumber + "]").addEventListener("click", function () {
             console.log('Sketch: ' + nineFigureNumber);
 
