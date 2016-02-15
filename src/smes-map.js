@@ -52,7 +52,7 @@ var SMESGMap = function (elementId, options) {
         disableAutoPan: false,
         maxWidth: 440,
         pixelOffset: new google.maps.Size(-220, 0),
-        zIndex: 6,
+        zIndex: 25,
         /*boxStyle: {
             background: "url('http://google-maps-utility-library-v3.googlecode.com/svn/trunk/infobox/examples/tipbox.gif') no - repeat",
             opacity: 0.75 //,
@@ -120,7 +120,32 @@ var SMESGMap = function (elementId, options) {
 
     //Attempt oto move map to current user coordinates
     self.geoLocate();
+    //Make sure infobox is correct size
+    self.resizeInfoBox();
 
+    //Set-up resizing
+    window.onresize = self.resizeInfoBox();
+
+
+};
+
+SMESGMap.prototype.resizeInfoBox = function () {
+    "use strict";
+
+    var self = this;
+    var windowWidth = window.innerWidth;
+    var currentBoxWidth = self.infoBox.maxWidth_;
+
+    if ((windowWidth < 440 || currentBoxWidth < 440) && windowWidth !== currentBoxWidth) {
+        if (windowWidth > 440) {
+            windowWidth = 440;
+        }
+
+        self.infoBox.setOptions({
+            maxWidth: windowWidth,
+            pixelOffset: new google.maps.Size(windowWidth * -0.5, 0)
+        });
+    }
 
 };
 
@@ -571,12 +596,13 @@ SMESGMap.prototype.reverseGeocode = function (cLat, cLng) {
     });
 };
 
-SMESGMap.prototype.setUpAutoComplete = function (elementId) {
+SMESGMap.prototype.setUpAutoComplete = function (elementId, clearButtonId) {
     "use strict";
 
     var self = this;
     var input = document.getElementById(elementId);
     var searchInfoWindow = new google.maps.InfoWindow();
+    var clearButton = document.getElementById(clearButtonId);
 
     var searchMarker = new google.maps.Marker({
         map: self.map,
@@ -586,6 +612,16 @@ SMESGMap.prototype.setUpAutoComplete = function (elementId) {
     self.autoComplete = new google.maps.places.Autocomplete(input);
     self.autoComplete.bindTo('bounds', self.map);
 
+    input.addEventListener('input', function () {
+        input.classList.remove("not-found");
+        if (input.value === "") {
+            clearButton.classList.add("hidden");
+        } else {
+            clearButton.classList.remove("hidden");
+        }
+
+    });
+
 
     self.autoComplete.addListener('place_changed', function () {
         searchInfoWindow.close();
@@ -593,8 +629,11 @@ SMESGMap.prototype.setUpAutoComplete = function (elementId) {
         var place = self.autoComplete.getPlace();
 
         if (!place.geometry) {
+            input.classList.add("not-found");
             return;
         }
+
+        input.classList.remove("not-found");
 
         // If the place has a geometry, then present it on a map.
         if (place.geometry.viewport) {

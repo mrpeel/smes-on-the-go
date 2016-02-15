@@ -212,8 +212,7 @@ body {
     display: none;
 }
 .infobox {
-    min-width: 400px;
-    max-width: 100vw;
+    width: 440px;
 }
 .mdl-card {
     z-index: 15;
@@ -359,7 +358,7 @@ body {
 .about-box {
     min-height: 250px;
     max-height: 450px;
-    min-width: 450px;
+    width: 450px;
     top: calc(50% - 225px);
     left: calc(50% - 225px);
 }
@@ -389,4 +388,40 @@ body {
     height: 24px;
     width: 24px;
     flex: none;
+}
+@media (min-width: 451px) and (max-width: 779px) {
+    .search-box {
+        width: 85%;
+    }
+}
+@media (max-width: 450px) {
+    .search-box {
+        width: calc(100vw - 55px);
+    }
+    .about-box {
+        width: calc(100vw - 20px);
+        left: 10px;
+    }
+    .infobox {
+        width: calc(100vw - 10px);
+        left: 0;
+    }
+    .section__circle-container {
+        width: 52px;
+        height: 52px;
+        margin-top: 2px;
+        margin-right: 2px;
+    }
+    .section__circle-container > .section__circle-container__circle {
+        width: 44px;
+        height: 44px;
+        border-radius: 22px;
+    }
+    .info-symbol {
+        padding-top: 9px;
+        padding-bottom: 6px;
+        padding-left: 9px;
+        height: 26px;
+        width: 26px;
+    }
 }

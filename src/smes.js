@@ -371,6 +371,8 @@ function markClickHandler(nineFigureNumber, lat, lng) {
         currentLatLng.lat = lat;
         currentLatLng.lng = lng;
 
+        zoomInMsg.classList.add("hidden");
+
         var addressDiv = document.getElementById("address" + nineFigureNumber);
         var address = "";
 
