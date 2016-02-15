@@ -213,6 +213,7 @@ body {
 }
 .infobox {
     width: 440px;
+    margin-bottom: 20px;
 }
 .mdl-card {
     z-index: 15;
@@ -396,7 +397,7 @@ body {
 }
 @media (max-width: 450px) {
     .search-box {
-        width: calc(100vw - 55px);
+        width: calc(100vw - 20px);
     }
     .about-box {
         width: calc(100vw - 20px);

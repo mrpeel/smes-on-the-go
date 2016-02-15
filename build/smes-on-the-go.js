@@ -2157,14 +2157,23 @@ function clearSearch() {
 function setupMap() {
 
     var mapOptions = {};
+    mobileOS = isMobile();
+
+
     mapOptions.idle = requestMarkInformation;
     mapOptions.zoomChanged = displayZoomMessage;
 
     smesMap = new SMESGMap("map", mapOptions);
+    if (mobileOS !== "") {
+        smesMap.map.setOptions({
+            zoomControl: false
+        });
+    }
+
+
     markStore = new SMESMarkStore();
     smesMap.setUpAutoComplete("location-search", "clear-search-div");
 
-    mobileOS = isMobile();
 
     loadMarks();
 
@@ -2217,8 +2226,9 @@ function displayZoomMessage() {
         zoomInMsg.innerHTML = '<span class="zoom-in-message-text">Zoom to display marks</span>';
     }
 
-
-    if (!smesMap.mapSize || smesMap.mapSize > 2 || currentZoom < 14 || markStore.tooManyMarks) {
+    //Check that the infobox is currently being displayed beause ti overlays the map and obscures the box on mobile
+    //  If map size doesn't exist, the map is too small or there are too many marks to load then show the message
+    if (!smesMap.infoBox.getVisible() && (!smesMap.mapSize || smesMap.mapSize > 2 || currentZoom < 14 || markStore.tooManyMarks)) {
         zoomInMsg.classList.remove("hidden");
     } else {
         zoomInMsg.classList.add("hidden");
