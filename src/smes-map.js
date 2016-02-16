@@ -570,6 +570,7 @@ SMESGMap.prototype.showLabels = function () {
 SMESGMap.prototype.reverseGeocode = function (cLat, cLng) {
     "use strict";
 
+    var self = this;
 
     return new Promise(function (resolve, reject) {
 
@@ -578,7 +579,7 @@ SMESGMap.prototype.reverseGeocode = function (cLat, cLng) {
             lng: cLng
         };
 
-        this.geocoder.geocode({
+        self.geocoder.geocode({
             'location': latLng
         }, function (results, status) {
 

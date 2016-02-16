@@ -1092,6 +1092,7 @@ SMESGMap.prototype.showLabels = function () {
 SMESGMap.prototype.reverseGeocode = function (cLat, cLng) {
     "use strict";
 
+    var self = this;
 
     return new Promise(function (resolve, reject) {
 
@@ -1100,7 +1101,7 @@ SMESGMap.prototype.reverseGeocode = function (cLat, cLng) {
             lng: cLng
         };
 
-        this.geocoder.geocode({
+        self.geocoder.geocode({
             'location': latLng
         }, function (results, status) {
 
@@ -2238,9 +2239,49 @@ function displayZoomMessage() {
 
 function loadMarks() {
     //Work through the new markers and add to the map, then work through updated markers and update on the map
-    var surveyMark, address, markType, navigateString, infoWindowContent;
+    var preparedMark;
 
     console.log("loadMarks");
+
+
+
+
+    //Add new marks
+    for (var n = 0; n < markStore.newIndex.length; n++) {
+
+
+        preparedMark = prepMarkForMap(markStore.markData[markStore.newIndex[n]].data, markStore.markData[markStore.newIndex[n]].address || '');
+
+        smesMap.addMarker(preparedMark.marker);
+        smesMap.addLabel(preparedMark.label);
+
+    }
+
+    //Update marks
+    for (var u = 0; u < markStore.updateIndex.length; u++) {
+
+
+        preparedMark = prepMarkForMap(markStore.markData[markStore.updateIndex[u]].data, markStore.markData[markStore.updateIndex[u]].address || '');
+
+
+
+        smesMap.updateMarker(preparedMark.marker);
+        smesMap.updateLabel(preparedMark.label);
+
+    }
+
+    //Call the zoom level to show / hide marks and labels as required
+    smesMap.setZoomLevel();
+    displayZoomMessage();
+}
+
+/**Returns an object with the mark object and the mark label object
+ **/
+function prepMarkForMap(surveyMark, address) {
+    var eventListeners = {};
+    var marker = {};
+    var label = {};
+    var navigateString;
 
     var closeButton = '<button id="close-info-box" class="close-button mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--icon">' +
         '<i class="material-icons">close</i>' +
@@ -2252,188 +2293,89 @@ function loadMarks() {
     var contentEDiv = '</div></div>';
 
 
+    var markType = returnMarkType(surveyMark);
 
-
-    //Add new marks
-    for (var n = 0; n < markStore.newIndex.length; n++) {
-
-        var eventListeners = {};
-        var marker = {};
-        var label = {};
-
-        surveyMark = markStore.markData[markStore.newIndex[n]].data;
-        address = markStore.markData[markStore.newIndex[n]].address || '';
-        markType = returnMarkType(surveyMark);
-
-        if (mobileOS !== "") {
-            navigateString = '<button id="navigate' + surveyMark.nineFigureNumber + '" class="smes-button mdl-button mdl-js-button mdl-js-ripple-effect fade-in">Navigate</button>';
-        } else {
-            navigateString = '';
-        }
-
-
-        eventListeners.domready = domReadyHandler(surveyMark.nineFigureNumber, surveyMark.name);
-        eventListeners.click = markClickHandler(surveyMark.nineFigureNumber, parseFloat(surveyMark.latitude), parseFloat(surveyMark.longitude));
-
-
-        infoWindowContent = cardDiv + '<div class="mdl-card__title mdl-color-text--white">' +
-            '<div class="info-window-header">' +
-            '<div class="section__circle-container">' +
-            '<div class="section__circle-container__circle card-symbol"> ' +
-            '<img class="info-symbol" src="symbology/' + markType.iconName + '.svg">' +
-            '</div>' +
-            '</div>' +
-            '<div class="header-text">' +
-            '<div class="nine-figure">' + surveyMark.nineFigureNumber + '</div>' +
-            '<div><h3 class="mdl-card__title-text">' + surveyMark.name + '</h3></div>' +
-            '<div class="mark-status">' + markType.markDetails + '</div>' +
-            '</div>' +
-            '</div>' +
-            closeButton +
-            '</div>' +
-            '<div class="mdl-card__supporting-text">' +
-            '<div id="address' + surveyMark.nineFigureNumber + '"></div>' +
-
-            '<div class="content-section">' +
-            '<div class="content-icon"><i class="material-icons">swap_horiz</i></div>' +
-            '<div class="content">' +
-            contentSDiv + 'LL94:' + contentMDiv + surveyMark.latitude + ', ' + surveyMark.longitude + contentEDiv +
-            contentSDiv + 'MGA:' + contentMDiv + surveyMark.zone + ', ' + surveyMark.easting + ', ' + surveyMark.northing + contentEDiv +
-            contentSDiv + 'GDA94 technique:' + contentMDiv + surveyMark.gda94Technique + contentEDiv +
-            contentSDiv + 'Ellipsoid height:' + contentMDiv + surveyMark.ellipsoidHeight + contentEDiv +
-            contentSDiv + 'Uncertainty:' + contentMDiv + surveyMark.hUncertainty + contentEDiv +
-            contentSDiv + 'Order:' + contentMDiv + surveyMark.hOrder + contentEDiv +
-            contentSDiv + 'GDA94 measurements:' + contentMDiv + surveyMark.gda94Measurements + contentEDiv +
-            '</div>' +
-            '</div>' +
-            '<div class="vert-spacer"></div>' +
-
-            '<div class="content-section">' +
-            '<div class="content-icon"><i class="material-icons">swap_vert</i></div>' +
-            '<div class="content">' +
-            contentSDiv + 'AHD height:' + contentMDiv + surveyMark.ahdHeight + contentEDiv +
-            contentSDiv + 'AHD technique:' + contentMDiv + surveyMark.ahdTechnique + contentEDiv +
-            contentSDiv + 'AHD uncertainty:' + contentMDiv + surveyMark.vUncertainty + contentEDiv +
-            contentSDiv + 'AHD order:' + contentMDiv + surveyMark.vOrder + contentEDiv +
-            contentSDiv + 'AHD level section:' + contentMDiv + surveyMark.ahdLevelSection + contentEDiv +
-            '</div>' +
-            '</div>' +
-
-            '</div>' +
-            '<div id="info-box-loader" class="hidden mdl-progress mdl-js-progress mdl-progress__indeterminate"></div>' +
-            '<div class="mdl-card__actions mdl-card--border">' +
-            '<div class="horiz-spacer"></div>' +
-            '<button id="sketch' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-js-ripple-effect smes-button fade-in">Sketch</button>' +
-            '<button id="report' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-js-ripple-effect smes-button fade-in">Report</button>' +
-            '</div></div>';
-
-        marker.lat = surveyMark.latitude;
-        marker.lng = surveyMark.longitude;
-        marker.title = surveyMark.name;
-        marker.icon = 'symbology/' + markType.iconName;
-        marker.nineFigureNo = surveyMark.nineFigureNumber;
-        marker.eventListeners = eventListeners;
-        marker.infoWindowContent = infoWindowContent;
-
-
-
-        smesMap.addMarker(marker);
-
-        label.lat = surveyMark.latitude;
-        label.lng = surveyMark.longitude;
-        label.label = surveyMark.name;
-        label.nineFigureNo = surveyMark.nineFigureNumber;
-
-        smesMap.addLabel(label);
-
+    if (mobileOS !== "") {
+        navigateString = '<button id="navigate' + surveyMark.nineFigureNumber + '" class="smes-button mdl-button mdl-js-button mdl-js-ripple-effect fade-in">Navigate</button>';
+    } else {
+        navigateString = '';
     }
 
-    //Update marks
-    for (var u = 0; u < markStore.updateIndex.length; u++) {
 
-        var uMarker = {};
-        var uLabel = {};
-
-        surveyMark = markStore.markData[markStore.newIndex[u]].data;
-        markType = returnMarkType(surveyMark);
+    eventListeners.domready = domReadyHandler(surveyMark.nineFigureNumber, surveyMark.name);
+    eventListeners.click = markClickHandler(surveyMark.nineFigureNumber, parseFloat(surveyMark.latitude), parseFloat(surveyMark.longitude));
 
 
-        infoWindowContent = cardDiv + '<div class="mdl-card__title mdl-color-text--white">' +
-            '<div class="info-window-header">' +
-            '<div class="section__circle-container">' +
-            '<div class="section__circle-container__circle card-symbol"> ' +
-            '<img class="info-symbol" src="symbology/' + markType.iconName + '.svg">' +
-            '</div>' +
-            '</div>' +
-            '<div class="header-text">' +
-            '<div class="nine-figure">' + surveyMark.nineFigureNumber + '</div>' +
-            '<div><h3 class="mdl-card__title-text">' + surveyMark.name + '</h3></div>' +
-            '<div class="mark-status">' + markType.markDetails + '</div>' +
-            '</div>' +
-            '</div>' +
-            closeButton +
-            '</div>' +
-            '<div class="mdl-card__supporting-text">' +
-            '<div id="address' + surveyMark.nineFigureNumber + '"></div>' +
+    var infoWindowContent = cardDiv + '<div class="mdl-card__title mdl-color-text--white">' +
+        '<div class="info-window-header">' +
+        '<div class="section__circle-container">' +
+        '<div class="section__circle-container__circle card-symbol"> ' +
+        '<img class="info-symbol" src="symbology/' + markType.iconName + '.svg">' +
+        '</div>' +
+        '</div>' +
+        '<div class="header-text">' +
+        '<div class="nine-figure">' + surveyMark.nineFigureNumber + '</div>' +
+        '<div><h3 class="mdl-card__title-text">' + surveyMark.name + '</h3></div>' +
+        '<div class="mark-status">' + markType.markDetails + '</div>' +
+        '</div>' +
+        '</div>' +
+        closeButton +
+        '</div>' +
+        '<div class="mdl-card__supporting-text">' +
+        '<div id="address' + surveyMark.nineFigureNumber + '"></div>' +
 
-            '<div class="content-section">' +
-            '<div class="content-icon"><i class="material-icons">swap_horiz</i></div>' +
-            '<div class="content">' +
-            contentSDiv + 'LL94:' + contentMDiv + surveyMark.latitude + ', ' + surveyMark.longitude + contentEDiv +
-            contentSDiv + 'MGA:' + contentMDiv + surveyMark.zone + ', ' + surveyMark.easting + ', ' + surveyMark.northing + contentEDiv +
-            contentSDiv + 'GDA94 technique:' + contentMDiv + surveyMark.gda94Technique + contentEDiv +
-            contentSDiv + 'Ellipsoid height:' + contentMDiv + surveyMark.ellipsoidHeight + contentEDiv +
-            contentSDiv + 'Uncertainty:' + contentMDiv + surveyMark.hUncertainty + contentEDiv +
-            contentSDiv + 'Order:' + contentMDiv + surveyMark.hOrder + contentEDiv +
-            contentSDiv + 'GDA94 measurements:' + contentMDiv + surveyMark.gda94Measurements + contentEDiv +
-            '</div>' +
-            '</div>' +
-            '<div class="vert-spacer"></div>' +
+        '<div class="content-section">' +
+        '<div class="content-icon"><i class="material-icons">swap_horiz</i></div>' +
+        '<div class="content">' +
+        contentSDiv + 'LL94:' + contentMDiv + surveyMark.latitude + ', ' + surveyMark.longitude + contentEDiv +
+        contentSDiv + 'MGA:' + contentMDiv + surveyMark.zone + ', ' + surveyMark.easting + ', ' + surveyMark.northing + contentEDiv +
+        contentSDiv + 'GDA94 technique:' + contentMDiv + surveyMark.gda94Technique + contentEDiv +
+        contentSDiv + 'Ellipsoid height:' + contentMDiv + surveyMark.ellipsoidHeight + contentEDiv +
+        contentSDiv + 'Uncertainty:' + contentMDiv + surveyMark.hUncertainty + contentEDiv +
+        contentSDiv + 'Order:' + contentMDiv + surveyMark.hOrder + contentEDiv +
+        contentSDiv + 'GDA94 measurements:' + contentMDiv + surveyMark.gda94Measurements + contentEDiv +
+        '</div>' +
+        '</div>' +
+        '<div class="vert-spacer"></div>' +
 
-            '<div class="content-section">' +
-            '<div class="content-icon"><i class="material-icons">swap_vert</i></div>' +
-            '<div class="content">' +
-            contentSDiv + 'AHD height:' + contentMDiv + surveyMark.ahdHeight + contentEDiv +
-            contentSDiv + 'AHD technique:' + contentMDiv + surveyMark.ahdTechnique + contentEDiv +
-            contentSDiv + 'AHD uncertainty:' + contentMDiv + surveyMark.vUncertainty + contentEDiv +
-            contentSDiv + 'AHD order:' + contentMDiv + surveyMark.vOrder + contentEDiv +
-            contentSDiv + 'AHD level section:' + contentMDiv + surveyMark.ahdLevelSection + contentEDiv +
-            '</div>' +
-            '</div>' +
+        '<div class="content-section">' +
+        '<div class="content-icon"><i class="material-icons">swap_vert</i></div>' +
+        '<div class="content">' +
+        contentSDiv + 'AHD height:' + contentMDiv + surveyMark.ahdHeight + contentEDiv +
+        contentSDiv + 'AHD technique:' + contentMDiv + surveyMark.ahdTechnique + contentEDiv +
+        contentSDiv + 'AHD uncertainty:' + contentMDiv + surveyMark.vUncertainty + contentEDiv +
+        contentSDiv + 'AHD order:' + contentMDiv + surveyMark.vOrder + contentEDiv +
+        contentSDiv + 'AHD level section:' + contentMDiv + surveyMark.ahdLevelSection + contentEDiv +
+        '</div>' +
+        '</div>' +
 
-            '</div>' +
-            '<div id="info-box-loader" class="hidden mdl-progress mdl-js-progress mdl-progress__indeterminate"></div>' +
-            '<div class="mdl-card__actions mdl-card--border">' +
-            '<div class="horiz-spacer"></div>' +
-            '<button id="sketch' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-js-ripple-effect smes-button fade-in">Sketch</button>' +
-            '<button id="report' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-js-ripple-effect smes-button fade-in">Report</button>' +
-            '</div></div>';
+        '</div>' +
+        '<div id="info-box-loader" class="hidden mdl-progress mdl-js-progress mdl-progress__indeterminate"></div>' +
+        '<div class="mdl-card__actions mdl-card--border">' +
+        '<div class="horiz-spacer"></div>' +
+        '<button id="sketch' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-js-ripple-effect smes-button fade-in">Sketch</button>' +
+        '<button id="report' + surveyMark.nineFigureNumber + '" class="mdl-button mdl-js-button mdl-js-ripple-effect smes-button fade-in">Report</button>' +
+        navigateString +
+        '</div></div>';
 
-
-
-        uMarker.lat = surveyMark.latitude;
-        uMarker.lng = surveyMark.longitude;
-        uMarker.title = surveyMark.name;
-        uMarker.icon = 'symbology/' + markType.iconName;
-        uMarker.nineFigureNo = surveyMark.nineFigureNumber;
-        uMarker.infoWindowContent = infoWindowContent;
-
-
-        smesMap.updateMarker(uMarker);
+    marker.lat = surveyMark.latitude;
+    marker.lng = surveyMark.longitude;
+    marker.title = surveyMark.name;
+    marker.icon = 'symbology/' + markType.iconName;
+    marker.nineFigureNo = surveyMark.nineFigureNumber;
+    marker.eventListeners = eventListeners;
+    marker.infoWindowContent = infoWindowContent;
 
 
-        uLabel.lat = surveyMark.latitude;
-        uLabel.lng = surveyMark.longitude;
-        uLabel.label = surveyMark.name;
-        uLabel.nineFigureNo = surveyMark.nineFigureNumber;
+    label.lat = surveyMark.latitude;
+    label.lng = surveyMark.longitude;
+    label.label = surveyMark.name;
+    label.nineFigureNo = surveyMark.nineFigureNumber;
 
-        smesMap.updateLabel(uLabel);
-
-    }
-
-    //Call the zoom level to show / hide marks and labels as required
-    smesMap.setZoomLevel();
-    displayZoomMessage();
+    return ({
+        marker: marker,
+        label: label
+    });
 }
 
 function markClickHandler(nineFigureNumber, lat, lng) {
@@ -2444,27 +2386,6 @@ function markClickHandler(nineFigureNumber, lat, lng) {
 
         zoomInMsg.classList.add("hidden");
 
-        var addressDiv = document.getElementById("address" + nineFigureNumber);
-        var address = "";
-
-        if (addressDiv) {
-            address = markStore.returnAddress(currentNineFigureNumber);
-            if (address !== "") {
-                addressDiv.innerHTML = address;
-            } else {
-                smesMap.reverseGeocode(currentLatLng.lat, currentLatLng.lng).then(function (result) {
-                    if (result !== "") {
-                        //Find address div if it is still on the screen by the time the address returns;
-
-                        addressDiv.innerHTML = result;
-
-                        markStore.setAddress(currentNineFigureNumber, result);
-
-                    }
-                });
-
-            }
-        }
 
 
         console.log(nineFigureNumber);
@@ -2496,6 +2417,32 @@ function domReadyHandler(nineFigureNumber, markName) {
         //Make sure any created mdl component is registered qith the mdl component handler
         componentHandler.upgradeAllRegistered();
 
+        //Locate address
+
+        var addressDiv = document.getElementById("address" + nineFigureNumber);
+        var address = "";
+
+        if (addressDiv) {
+            address = markStore.returnAddress(currentNineFigureNumber);
+            if (address !== "") {
+                addressDiv.innerHTML = address;
+            } else {
+                smesMap.reverseGeocode(currentLatLng.lat, currentLatLng.lng).then(function (result) {
+                    if (result !== "") {
+                        //Find address div if it is still on the screen by the time the address returns;
+
+                        addressDiv.innerHTML = result;
+
+                        markStore.setAddress(currentNineFigureNumber, result);
+
+                    }
+                });
+
+            }
+        }
+
+
+        //Set-up button click for sketch
         document.querySelector("[id=sketch" + nineFigureNumber + "]").addEventListener("click", function () {
             console.log('Sketch: ' + nineFigureNumber);
 
@@ -2512,6 +2459,8 @@ function domReadyHandler(nineFigureNumber, markName) {
             });
 
         }, false);
+
+        //Set-up button click for report
         document.querySelector("[id=report" + nineFigureNumber + "]").addEventListener("click", function () {
             console.log('Report: ' + nineFigureNumber);
 
@@ -2528,6 +2477,7 @@ function domReadyHandler(nineFigureNumber, markName) {
             });
 
         }, false);
+        //If onmobile, set-up button click for navigate
         if (mobileOS !== "") {
             document.querySelector("[id=navigate" + nineFigureNumber + "]").addEventListener("click", startNavigation, false);
         }
