@@ -33,7 +33,24 @@ gulp.task('appcachetimestamp', function () {
                     }
                 ]
         }))
-        .pipe(gulp.dest('build/'))
+        .pipe(replace({
+            patterns: [
+                {
+                    match: 'cssfile',
+                    replacement: 'smes-on-the-go.min.css'
+                    }
+                ]
+        }))
+        .pipe(replace({
+            patterns: [
+                {
+                    match: 'jsfile',
+                    replacement: 'smes-on-the-go.min.js'
+                    }
+                ]
+        }))
+
+    .pipe(gulp.dest('build/'))
         .pipe(gulp.dest('dist/'));
 });
 
@@ -146,7 +163,7 @@ gulp.task('copysymbology', ['copylibfiles'], function () {
 /* Copy favicon files to the build and dist directories.
  */
 gulp.task('copyfavicon', ['copysymbology'], function () {
-    gulp.src(['src/favicon.*'])
+    gulp.src(['src/*.ico', 'src/*.png'])
         .pipe(debug())
         .pipe(gulp.dest('build/'))
         .pipe(gulp.dest('dist/'));

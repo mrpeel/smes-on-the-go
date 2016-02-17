@@ -2211,7 +2211,7 @@ function requestMarkInformation() {
     console.log("requestMarkInformation");
 
     markStore.requestMarkInformation(mapCenter.lat(), mapCenter.lng(), radius, loadMarks, displayZoomMessage);
-    console.log(markStore.newIndex);
+    //console.log(markStore.newIndex);
 
 }
 
