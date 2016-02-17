@@ -548,7 +548,7 @@ var SMESGMap = function (elementId, options) {
             position: google.maps.ControlPosition.RIGHT_TOP
         },
         scaleControl: true,
-        streetViewControl: true,
+        streetViewControl: false,
         streetViewControlOptions: {
             position: google.maps.ControlPosition.RIGHT_BOTTOM
         },
@@ -1107,7 +1107,14 @@ SMESGMap.prototype.reverseGeocode = function (cLat, cLng) {
 
             if (status === google.maps.GeocoderStatus.OK) {
                 if (results[0]) {
-                    resolve(results[0].formatted_address);
+                    //Remove Australia from the returned string
+                    var address = results[0].formatted_address.replace(", Australia", "");
+                    //Remove VIC and post code from the end of the string
+                    var vPos = address.indexOf("VIC ");
+                    if (vPos > 0) {
+                        address = address.substr(0, vPos - 1);
+                    }
+                    resolve(address);
                 } else {
                     resolve("");
                 }
@@ -2322,11 +2329,13 @@ function prepMarkForMap(surveyMark, address) {
         closeButton +
         '</div>' +
         '<div class="mdl-card__supporting-text">' +
-        '<div id="address' + surveyMark.nineFigureNumber + '"></div>' +
+
 
         '<div class="content-section">' +
         '<div class="content-icon"><i class="material-icons">swap_horiz</i></div>' +
         '<div class="content">' +
+        //'<div id="address' + surveyMark.nineFigureNumber + '" class="mark-address"></div>' +
+        contentSDiv + 'Closest address:' + contentMDiv + '<div id="address' + surveyMark.nineFigureNumber + '"></div>' + contentEDiv +
         contentSDiv + 'LL94:' + contentMDiv + surveyMark.latitude + ', ' + surveyMark.longitude + contentEDiv +
         contentSDiv + 'MGA:' + contentMDiv + surveyMark.zone + ', ' + surveyMark.easting + ', ' + surveyMark.northing + contentEDiv +
         contentSDiv + 'GDA94 technique:' + contentMDiv + surveyMark.gda94Technique + contentEDiv +

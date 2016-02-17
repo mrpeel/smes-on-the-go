@@ -15,6 +15,12 @@ body {
 .hidden {
     display: none;
 }
+.mdl-color-text--white {
+    color: rgb(255, 255, 255);
+}
+.mdl-color--white {
+    background-color: rgb(255, 255, 255);
+}
 
 /* App drawer */
 
@@ -213,7 +219,7 @@ body {
 }
 .infobox {
     width: 440px;
-    margin-bottom: 20px;
+    margin-bottom: 37px;
 }
 .mdl-card {
     z-index: 15;
@@ -307,6 +313,12 @@ body {
 .mdl-card__supporting-text {
     color: rgba(0, 0, 0, 0.87);
 }
+
+/*.mark-address {
+    font-size: 13px;
+    padding-top: 5px;
+}*/
+
 .content-section {
     display: -webkit-flex;
     display: flex;

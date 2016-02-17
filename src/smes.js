@@ -260,11 +260,13 @@ function prepMarkForMap(surveyMark, address) {
         closeButton +
         '</div>' +
         '<div class="mdl-card__supporting-text">' +
-        '<div id="address' + surveyMark.nineFigureNumber + '"></div>' +
+
 
         '<div class="content-section">' +
         '<div class="content-icon"><i class="material-icons">swap_horiz</i></div>' +
         '<div class="content">' +
+        //'<div id="address' + surveyMark.nineFigureNumber + '" class="mark-address"></div>' +
+        contentSDiv + 'Closest address:' + contentMDiv + '<div id="address' + surveyMark.nineFigureNumber + '"></div>' + contentEDiv +
         contentSDiv + 'LL94:' + contentMDiv + surveyMark.latitude + ', ' + surveyMark.longitude + contentEDiv +
         contentSDiv + 'MGA:' + contentMDiv + surveyMark.zone + ', ' + surveyMark.easting + ', ' + surveyMark.northing + contentEDiv +
         contentSDiv + 'GDA94 technique:' + contentMDiv + surveyMark.gda94Technique + contentEDiv +
