@@ -231,7 +231,7 @@ body {
 .close-button {
     position: absolute;
     right: 5px;
-    top: 15px;
+    top: 10px;
 }
 .card-content {
     display: -webkit-flex;
@@ -240,11 +240,12 @@ body {
     flex-direction: row;
 }
 .card-left {
-    width: 150px;
+    width: 110px;
 }
 .card-value {
     -webkit-flex: auto;
     flex: auto;
+    min-width: 0;
 }
 .info-window-header {
     display: -webkit-flex;
@@ -262,17 +263,17 @@ body {
 .section__circle-container > .section__circle-container__circle {
     width: 56px;
     height: 56px;
-    border-radius: 28px;
+    border-radius: 50%;
     margin: 0;
     position: absolute;
     z-index: 200;
 }
 .info-symbol {
-    padding-top: 12px;
-    padding-bottom: 10px;
-    padding-left: 13px;
-    height: 30px;
-    width: 30px;
+    padding-top: 11px;
+    padding-bottom: 9px;
+    padding-left: 12px;
+    height: 32px;
+    width: 32px;
     z-index: 200;
     position: absolute;
 }
@@ -436,5 +437,17 @@ body {
         padding-left: 9px;
         height: 26px;
         width: 26px;
+    }
+    .card-value {
+        text-overflow: ellipsis;
+        white-space: nowrap;
+    }
+}
+@media (max-width: 400px) {
+    .mdl-card__supporting-text {
+        padding-left: 11px;
+    }
+    .content-icon {
+        padding-right: 5px;
     }
 }

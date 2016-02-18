@@ -126,6 +126,7 @@ function setupMap() {
  */
 function geoLocate() {
 
+    showLoader();
     smesMap.geoLocate();
 
 }
@@ -157,6 +158,8 @@ function hideLoader() {
 
 function displayZoomMessage() {
 
+    hideLoader();
+
     var currentZoom = smesMap.getZoom();
 
     if (markStore.useLocalStore && currentZoom >= 14) {
@@ -172,7 +175,7 @@ function displayZoomMessage() {
     } else {
         zoomInMsg.classList.add("hidden");
     }
-    hideLoader();
+
 }
 
 function loadMarks() {
@@ -266,14 +269,14 @@ function prepMarkForMap(surveyMark, address) {
         '<div class="content-icon"><i class="material-icons">swap_horiz</i></div>' +
         '<div class="content">' +
         //'<div id="address' + surveyMark.nineFigureNumber + '" class="mark-address"></div>' +
-        contentSDiv + 'Closest address:' + contentMDiv + '<div id="address' + surveyMark.nineFigureNumber + '"></div>' + contentEDiv +
+        contentSDiv + 'Address:' + contentMDiv + '<div id="address' + surveyMark.nineFigureNumber + '"></div>' + contentEDiv +
         contentSDiv + 'LL94:' + contentMDiv + surveyMark.latitude + ', ' + surveyMark.longitude + contentEDiv +
         contentSDiv + 'MGA:' + contentMDiv + surveyMark.zone + ', ' + surveyMark.easting + ', ' + surveyMark.northing + contentEDiv +
-        contentSDiv + 'GDA94 technique:' + contentMDiv + surveyMark.gda94Technique + contentEDiv +
+        contentSDiv + 'Technique:' + contentMDiv + surveyMark.gda94Technique + contentEDiv +
         contentSDiv + 'Ellipsoid height:' + contentMDiv + surveyMark.ellipsoidHeight + contentEDiv +
         contentSDiv + 'Uncertainty:' + contentMDiv + surveyMark.hUncertainty + contentEDiv +
         contentSDiv + 'Order:' + contentMDiv + surveyMark.hOrder + contentEDiv +
-        contentSDiv + 'GDA94 measurements:' + contentMDiv + surveyMark.gda94Measurements + contentEDiv +
+        contentSDiv + 'Measurements:' + contentMDiv + surveyMark.gda94Measurements + contentEDiv +
         '</div>' +
         '</div>' +
         '<div class="vert-spacer"></div>' +
@@ -282,10 +285,10 @@ function prepMarkForMap(surveyMark, address) {
         '<div class="content-icon"><i class="material-icons">swap_vert</i></div>' +
         '<div class="content">' +
         contentSDiv + 'AHD height:' + contentMDiv + surveyMark.ahdHeight + contentEDiv +
-        contentSDiv + 'AHD technique:' + contentMDiv + surveyMark.ahdTechnique + contentEDiv +
-        contentSDiv + 'AHD uncertainty:' + contentMDiv + surveyMark.vUncertainty + contentEDiv +
-        contentSDiv + 'AHD order:' + contentMDiv + surveyMark.vOrder + contentEDiv +
-        contentSDiv + 'AHD level section:' + contentMDiv + surveyMark.ahdLevelSection + contentEDiv +
+        contentSDiv + 'Technique:' + contentMDiv + surveyMark.ahdTechnique + contentEDiv +
+        contentSDiv + 'Uncertainty:' + contentMDiv + surveyMark.vUncertainty + contentEDiv +
+        contentSDiv + 'Order:' + contentMDiv + surveyMark.vOrder + contentEDiv +
+        contentSDiv + 'Level section:' + contentMDiv + surveyMark.ahdLevelSection + contentEDiv +
         '</div>' +
         '</div>' +
 
@@ -538,7 +541,6 @@ function clearError() {
  */
 
 function startNavigation() {
-    clearError();
 
     if (typeof currentLatLng.lat === "number" && typeof currentLatLng.lng === "number" && mobileOS !== "") {
         var navURL;
