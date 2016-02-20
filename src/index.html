@@ -103,12 +103,22 @@
                             <button id="locate" class="mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--icon">
                                 <i class="material-icons">my_location</i>
                             </button>
+                            <div class="mdl-tooltip" for="locate">
+                                Pan to your current location
+                            </div>
+
                         </div>
                     </div>
                     <div id="loader" class="loader hidden mdl-progress mdl-js-progress mdl-progress__indeterminate"></div>
                 </div>
 
                 <div id="zoom-in-msg" class="zoom-in-message hidden"><span class="zoom-in-message-text">Displaying cached marks - zoom to refresh</span></div>
+                <div id="connection-indicator" class="connection-indicator connected">
+                    <i id="connect-icon" class="material-icons connection">cloud_done</i>
+                </div>
+                <div id="connection-tooltip" class="mdl-tooltip mdl-tooltip--left" for="connection-indicator">
+                    Pan to your current location
+                </div>
 
             </div>
             <div class="infobox-wrapper">
@@ -155,6 +165,18 @@
 
         </main>
     </div>
+    <script>
+        // Check if a new cache is available on page load - force a reload if it has.        
+        window.addEventListener('load', function(e) {
+            window.applicationCache.addEventListener('updateready', function(e) {
+                if (window.applicationCache.status == window.applicationCache.UPDATEREADY) {
+                    // Browser downloaded a new app cache.                    
+                    window.location.reload();
+                }
+            }, false);
+        }, false);
+
+    </script>
     <script>
         // If Promise and/or fetch are not supported, include the polyfill
         window.Promise || document.write("<script src=Promise.min.js><\/script>");

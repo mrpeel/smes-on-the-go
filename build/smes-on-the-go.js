@@ -633,10 +633,14 @@ var SMESGMap = function (elementId, options) {
             closeButt.addEventListener("click", function () {
                 lInfoBox.setVisible(false);
                 self.resetSelectedMarker();
+
+                if (typeof options.closeInfobox === "function") {
+                    options.closeInfobox.apply(self);
+                }
+
             });
+
         }
-
-
     });
 
 
@@ -2072,6 +2076,7 @@ SMESGMap.prototype.setupMapStyles = function () {
 
 //Variables for display
 var loader;
+var connectionIndicator, connectIcon, connectToolTip;
 var locateButton;
 var zoomInMsg;
 var errorMsg;
@@ -2091,10 +2096,12 @@ var currentRadius;
 
 window.addEventListener('load', function (e) {
 
-    loader = document.querySelector("[id=loader]");
-    zoomInMsg = document.querySelector("[id=zoom-in-msg]");
-    errorMsg = document.querySelector("[id=error-msg]");
-    locateButton = document.querySelector("[id=locate]");
+    loader = document.getElementById("loader");
+    connectionIndicator = document.getElementById("connection-indicator");
+    connectIcon = document.getElementById("connect-icon");
+    connectToolTip = document.getElementById("connection-tooltip");
+    zoomInMsg = document.getElementById("zoom-in-msg");
+    locateButton = document.getElementById("locate");
     locateButton.addEventListener("click", geoLocate, false);
     document.getElementById("hamburger-menu").addEventListener("click", showDrawer, false);
     document.getElementById("clear-search").addEventListener("click", clearSearch, false);
@@ -2170,6 +2177,9 @@ function setupMap() {
 
     mapOptions.idle = requestMarkInformation;
     mapOptions.zoomChanged = displayZoomMessage;
+    mapOptions.closeInfobox = function () {
+        connectionIndicator.classList.remove("hidden");
+    };
 
     smesMap = new SMESGMap("map", mapOptions);
     if (mobileOS !== "") {
@@ -2218,10 +2228,22 @@ function requestMarkInformation() {
 
 function showLoader() {
     loader.classList.remove("hidden");
+
+    connectIcon.textContent = 'cloud_queue';
+    connectionIndicator.classList.remove("connection-off");
+    connectionIndicator.classList.remove("connected");
+    connectionIndicator.classList.add("pulsating");
+    connectToolTip.textContent = "Connecting to Land Victoria";
+
+
+
 }
 
 function hideLoader() {
-    loader.classList.add("hidden");
+    window.setTimeout(function () {
+        loader.classList.add("hidden");
+    }, 0);
+
 }
 
 
@@ -2230,19 +2252,31 @@ function displayZoomMessage() {
     hideLoader();
 
     var currentZoom = smesMap.getZoom();
+    var zoomContent;
 
     if (markStore.useLocalStore && currentZoom >= 14) {
-        zoomInMsg.innerHTML = '<span class="zoom-in-message-text">Displaying cached marks - zoom to refresh</span>';
+        //zoomInMsg.innerHTML = '<span class="zoom-in-message-text">Displaying cached marks - zoom to refresh</span>';
+        zoomContent = "Can't load marks at this zoom<br>Displaying cached marks only<br>Zoom in to load marks";
     } else {
-        zoomInMsg.innerHTML = '<span class="zoom-in-message-text">Zoom to display marks</span>';
+        //zoomInMsg.innerHTML = '<span class="zoom-in-message-text">Zoom to display marks</span>';
+        zoomContent = "Can't load marks at this zoom<br>Zoom in to load marks";
     }
 
     //Check that the infobox is currently being displayed beause ti overlays the map and obscures the box on mobile
     //  If map size doesn't exist, the map is too small or there are too many marks to load then show the message
     if (!smesMap.infoBox.getVisible() && (!smesMap.mapSize || smesMap.mapSize > 2 || currentZoom < 14 || markStore.tooManyMarks)) {
-        zoomInMsg.classList.remove("hidden");
+        connectIcon.textContent = 'cloud_off';
+        connectionIndicator.classList.remove("pulsating");
+        connectionIndicator.classList.remove("connected");
+        connectionIndicator.classList.add("connection-off");
+        connectToolTip.innerHTML = zoomContent;
+
     } else {
-        zoomInMsg.classList.add("hidden");
+        connectIcon.textContent = 'cloud_done';
+        connectionIndicator.classList.remove("connection-off");
+        connectionIndicator.classList.remove("pulsating");
+        connectionIndicator.classList.add("connected");
+        connectToolTip.innerHTML = "Marks loaded";
     }
 
 }
@@ -2396,9 +2430,8 @@ function markClickHandler(nineFigureNumber, lat, lng) {
         currentLatLng.lat = lat;
         currentLatLng.lng = lng;
 
-        zoomInMsg.classList.add("hidden");
-
-
+        //Hide connection icon
+        connectionIndicator.classList.add("hidden");
 
         console.log(nineFigureNumber);
     };

@@ -147,6 +147,7 @@ body {
     padding-top: 14px;
     padding-bottom: 14px;
     text-align: center;
+    display: none;
 }
 .zoom-in-message-text {
     font-size: 14px;
@@ -176,9 +177,43 @@ body {
     font-weight: 400;
     color: rgba(193, 15, 15, 1);
 }
+.connection-indicator {
+    position: absolute;
+    right: 15px;
+    bottom: 20px;
+}
+.connection {
+    font-size: 32px;
+}
+.connection-off {
+    color: #D32F2F;
+}
+.connected {
+    color: #388E3C;
+}
+.pulsating {
+    animation: pulsate 1.5s ease-out;
+    animation-iteration-count: infinite;
+    opacity: 0.0;
+    color: #FFA000;
+}
+@keyframes pulsate {
+    0% {
+        transform: scale(0.1, 0.1);
+        opacity: 0.0;
+    }
+    50% {
+        opacity: 1.0;
+    }
+    100% {
+        transform: scale(1.2, 1.2);
+        opacity: 0.0;
+    }
+}
+
+}
 
 /* Overlay */
-
 .overlay {
     display: block;
     background: rgba(242, 245, 248, 0.5);
@@ -213,7 +248,6 @@ body {
 }
 
 /*Infobox*/
-
 .infobox-wrapper {
     display: none;
 }
@@ -319,7 +353,6 @@ body {
     font-size: 13px;
     padding-top: 5px;
 }*/
-
 .content-section {
     display: -webkit-flex;
     display: flex;
@@ -330,6 +363,7 @@ body {
     height: 24px;
     width: 24px;
     /*color: rgba(33, 150, 243, 0.87);*/
+    
     color: #1565C0;
     flex: none;
     padding-right: 10px;
@@ -360,7 +394,6 @@ body {
 }
 
 /* About box */
-
 .screen-overlay {
     position: absolute;
     left: 0;
@@ -442,6 +475,9 @@ body {
         text-overflow: ellipsis;
         white-space: nowrap;
     }
+    .connection {
+        font-size: 28px;
+    }
 }
 @media (max-width: 400px) {
     .mdl-card__supporting-text {
@@ -449,5 +485,8 @@ body {
     }
     .content-icon {
         padding-right: 5px;
+    }
+    .infobox {
+        margin-bottom: 15px;
     }
 }

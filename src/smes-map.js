@@ -111,10 +111,14 @@ var SMESGMap = function (elementId, options) {
             closeButt.addEventListener("click", function () {
                 lInfoBox.setVisible(false);
                 self.resetSelectedMarker();
+
+                if (typeof options.closeInfobox === "function") {
+                    options.closeInfobox.apply(self);
+                }
+
             });
+
         }
-
-
     });
 
 
