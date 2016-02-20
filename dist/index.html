@@ -10,6 +10,11 @@
     <title id="bar-title">SMES On The Go</title>
 
     <meta name="application-name" content="SMES On The Go" />
+    <meta name="mobile-web-app-capable" content="yes">
+
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="white">
+    <meta name="apple-mobile-web-app-title" content="SMES On The Goe">
     <link rel="apple-touch-icon-precomposed" sizes="57x57" href="apple-touch-icon-57x57.png" />
     <link rel="apple-touch-icon-precomposed" sizes="114x114" href="apple-touch-icon-114x114.png" />
     <link rel="apple-touch-icon-precomposed" sizes="72x72" href="apple-touch-icon-72x72.png" />
@@ -18,6 +23,7 @@
     <link rel="apple-touch-icon-precomposed" sizes="120x120" href="apple-touch-icon-120x120.png" />
     <link rel="apple-touch-icon-precomposed" sizes="76x76" href="apple-touch-icon-76x76.png" />
     <link rel="apple-touch-icon-precomposed" sizes="152x152" href="apple-touch-icon-152x152.png" />
+
     <link rel="icon" type="image/png" href="favicon-196x196.png" sizes="196x196" />
     <link rel="icon" type="image/png" href="favicon-96x96.png" sizes="96x96" />
     <link rel="icon" type="image/png" href="favicon-32x32.png" sizes="32x32" />
@@ -47,7 +53,7 @@
             <span class="mdl-layout-title">SMES On The Go</span>
             <nav class="mdl-navigation">
 
-                <div id="nav-map" class="mdl-navigation__link">
+                <div id="nav-map" class="mdl-navigation__link nav-dropdown">
                     <div class="map-style-flex">
                         <div class="map-style-title">Style:</div>
                         <div class="map-style">
@@ -55,6 +61,7 @@
                             <button id="map-style-drop-down" class="mdl-button mdl-js-button mdl-button--icon right-button">
                                 <i class="material-icons">arrow_drop_down</i>
                             </button>
+                            <span class="visuallyhidden">Map styles</span>
                         </div>
 
                     </div>
@@ -116,7 +123,7 @@
                 <div id="connection-indicator" class="connection-indicator connected">
                     <i id="connect-icon" class="material-icons connection">cloud_done</i>
                 </div>
-                <div id="connection-tooltip" class="mdl-tooltip mdl-tooltip--left" for="connection-indicator">
+                <div id="connection-tooltip" class="mdl-tooltip mdl-tooltip--left" for="connect-icon">
                     Pan to your current location
                 </div>
 

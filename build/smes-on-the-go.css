@@ -21,6 +21,9 @@ body {
 .mdl-color--white {
     background-color: rgb(255, 255, 255);
 }
+.nav-dropdown {
+    z-index: 99;
+}
 
 /* App drawer */
 
@@ -39,7 +42,7 @@ body {
 }
 .map-style-title {
     width: 50px;
-    padding-top: 5px;
+    padding-top: 3px;
 }
 .map-style {
     flex: auto;
