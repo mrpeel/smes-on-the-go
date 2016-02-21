@@ -20,7 +20,13 @@ var SMESMarkStore = function () {
         this.markData = {};
     }
 
+    var self = this;
 
+    //Add a before unload event to write marks to storage
+    window.addEventListener("beforeunload", function (e) {
+        // Do something
+        self.executeSaveMarks();
+    }, false);
 };
 
 
@@ -87,40 +93,50 @@ SMESMarkStore.prototype.saveMarksToStorage = function () {
     }
 
     var self = this;
-    var storageTimeStamp, culledMarkData;
+    var storageTimeStamp;
 
     //Set timestamp for last storage
     self.lastStorageTimeStamp = Date.now();
     storageTimeStamp = self.lastStorageTimeStamp;
 
-    //Set function to write storage after 20 seconds.
-    // if another write request comes in within 20 seconds, this.lastStorageTimeStamp variable will have changed and the write will be aborted.
+    //Set function to write storage after 5 minutes.
+    // if another write request comes in within 5 minutes, this.lastStorageTimeStamp variable will have changed and the write will be aborted.
     window.setTimeout(function () {
         if (storageTimeStamp === self.lastStorageTimeStamp) {
-            try {
-                window.localStorage.setItem('smes-mark-data', JSON.stringify(self.markData));
-                console.log("Data written to local storage");
-            } catch (e) {
-                try {
-                    //Check total size - if >= 5MB then start culling - attempt to only store marks retrieved within the last 7 days
-                    if (JSON.stringify(culledMarkData).length > 5000000) {
-                        culledMarkData = self.removeOldMarks(7);
-                    }
+            self.executeSaveMarks();
 
-                    //Check total size - if still >= 5MB then start culling - attempt to only store marks retrieved in the last day
-                    if (JSON.stringify(culledMarkData).length > 5000000) {
-                        culledMarkData = self.removeOldMarks(7);
-                    }
-
-                    window.localStorage.setItem('smes-mark-data', JSON.stringify(culledMarkData));
-                } catch (e) {
-                    //Give up
-                    console.log("Write to local storage failed");
-                }
-            }
         }
-    }, 20000);
+    }, 300000);
 
+};
+
+SMESMarkStore.prototype.executeSaveMarks = function () {
+    "use strict";
+
+    var culledMarkData;
+    var self = this;
+
+    try {
+        window.localStorage.setItem('smes-mark-data', JSON.stringify(self.markData));
+        console.log("Data written to local storage");
+    } catch (e) {
+        try {
+            //Check total size - if >= 5MB then start culling - attempt to only store marks retrieved within the last 7 days
+            if (JSON.stringify(culledMarkData).length > 5000000) {
+                culledMarkData = self.removeOldMarks(7);
+            }
+
+            //Check total size - if still >= 5MB then start culling - attempt to only store marks retrieved in the last day
+            if (JSON.stringify(culledMarkData).length > 5000000) {
+                culledMarkData = self.removeOldMarks(7);
+            }
+
+            window.localStorage.setItem('smes-mark-data', JSON.stringify(culledMarkData));
+        } catch (e) {
+            //Give up
+            console.log("Write to local storage failed");
+        }
+    }
 };
 
 SMESMarkStore.prototype.removeOldMarks = function (numberOfDays) {
@@ -237,7 +253,7 @@ SMESMarkStore.prototype.processRetrievedMarks = function (retrievedData) {
     "use strict";
 
     var self = this;
-    var dataObject, dataHash, objectProp;
+    var dataObject, objectProp;
 
     return new Promise(function (resolve, reject) {
 
@@ -254,19 +270,16 @@ SMESMarkStore.prototype.processRetrievedMarks = function (retrievedData) {
             //Check whether this mark is already in the store
             if (!self.markData[dataObject.nineFigureNumber]) {
                 //Don't have mark, so add it
-                dataHash = self.calculateDataHash(dataObject);
-                self.addUpdateValueInStore(dataObject, dataHash);
+                self.addUpdateValueInStore(dataObject);
                 self.newIndex.push(dataObject.nineFigureNumber);
 
             } else {
                 //Already have this mark - Check whether the mark was last retrieved within a day
                 if (self.isNumberOfDaysOld(self.markData[dataObject.nineFigureNumber].lastUpdated || 0, 1)) {
-                    //Check whether mark information has changed - using a simple data hash
-                    dataHash = self.calculateDataHash(dataObject);
-
-                    if (dataHash !== self.markData[dataObject.nineFigureNumber].dataHash) {
+                    //Check whether mark information has changed
+                    if (JSON.stringify(dataObject) !== JSON.stringify(self.markData[dataObject.nineFigureNumber].data)) {
                         //data has changed so store data, store hash, remove address, and update lastUpdated
-                        self.addUpdateValueInStore(dataObject, dataHash);
+                        self.addUpdateValueInStore(dataObject);
                         self.updateIndex.push(dataObject.nineFigureNumber);
                     } else {
                         //Latest data is the same so change the lastUpdated value to now
@@ -307,22 +320,7 @@ SMESMarkStore.prototype.countMarks = function () {
     return markCounter;
 };
 
-SMESMarkStore.prototype.calculateDataHash = function (dataObject) {
-    "use strict";
-
-    var objectProp, dataHash;
-
-    dataHash = "";
-
-    //Simple concatenation of the properties of the object - up to 24 vals
-    for (objectProp in dataObject) {
-        dataHash = dataHash + dataObject[objectProp];
-    }
-
-    return dataHash;
-};
-
-SMESMarkStore.prototype.addUpdateValueInStore = function (dataObject, dataHash) {
+SMESMarkStore.prototype.addUpdateValueInStore = function (dataObject) {
     "use strict";
 
     if (!this.markData[dataObject.nineFigureNumber]) {
@@ -330,7 +328,6 @@ SMESMarkStore.prototype.addUpdateValueInStore = function (dataObject, dataHash) 
     }
 
     this.markData[dataObject.nineFigureNumber].data = dataObject;
-    this.markData[dataObject.nineFigureNumber].dataHash = dataHash;
     delete this.markData[dataObject.nineFigureNumber].address;
     this.markData[dataObject.nineFigureNumber].lastUpdated = Date.now();
 
