@@ -697,9 +697,10 @@ SMESGMap.prototype.setUpAutoComplete = function (elementId, clearButtonId) {
 SMESGMap.prototype.checkSizeofMap = function () {
     "use strict";
 
+    var smesGMap = this;
+
     var mapBoundsSouthWest = smesGMap.map.getBounds().getSouthWest();
     var mapCenter = smesGMap.map.getCenter();
-    var smesGMap = this;
 
     if (typeof mapBoundsSouthWest !== 'undefined' && typeof mapCenter !== 'undefined') {
         var mapRadius = smesGMap.getDistanceKms(mapCenter.lat(), mapCenter.lng(), mapBoundsSouthWest.lat(), mapBoundsSouthWest.lng());

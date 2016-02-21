@@ -37,25 +37,31 @@ window.addEventListener('load', function (e) {
 
     overlayEl = document.getElementById("screen-overlay");
 
-
     setupMap();
 
-    var styleList = document.getElementById("style-option-list");
+    //Allow oppporunity for geolocation to complete prior to loading marks
+    window.setTimeout(function () {
+        loadMarks();
+        displayZoomMessage();
+    }, 50);
 
-    //Set-up map style click handlers
-    for (var i = 0; i < styleList.childNodes.length; i++) {
-        if (styleList.childNodes[i].nodeType === 1) {
-            createMapClickHandler(styleList.childNodes[i].id, styleList.childNodes[i].textContent);
+    //When current processing is one, set-up map style click handlers
+    window.setTimeout(function () {
+        var styleList = document.getElementById("style-option-list");
+
+
+        for (var i = 0; i < styleList.childNodes.length; i++) {
+            if (styleList.childNodes[i].nodeType === 1) {
+                createMapClickHandler(styleList.childNodes[i].id, styleList.childNodes[i].textContent);
+            }
+
+            //Reset map-style text if required
+            if (smesMap.mapStyleName && smesMap.mapStyleName === styleList.childNodes[i].id) {
+                document.getElementById("map-style-name").textContent = styleList.childNodes[i].textContent;
+
+            }
         }
-
-        //Reset map-style text if required
-        if (smesMap.mapStyleName && smesMap.mapStyleName === styleList.childNodes[i].id) {
-            document.getElementById("map-style-name").textContent = styleList.childNodes[i].textContent;
-
-        }
-    }
-
-    geoLocate();
+    }, 100);
 
 
 }, false);
@@ -120,10 +126,6 @@ function setupMap() {
     smesMap.setUpAutoComplete("location-search", "clear-search-div");
 
 
-    loadMarks();
-
-
-    displayZoomMessage();
 
 }
 
@@ -189,9 +191,8 @@ function displayZoomMessage() {
         zoomContent = "Can't load marks at this zoom<br>Zoom in to load marks";
     }
 
-    //Check that the infobox is currently being displayed beause ti overlays the map and obscures the box on mobile
     //  If map size doesn't exist, the map is too small or there are too many marks to load then show the message
-    if (!smesMap.infoBox.getVisible() && (!smesMap.mapSize || smesMap.mapSize > 2 || currentZoom < 14 || markStore.tooManyMarks)) {
+    if (!smesMap.mapSize || smesMap.mapSize > 2 || currentZoom < 14 || markStore.tooManyMarks) {
         connectIcon.textContent = 'cloud_off';
         connectionIndicator.classList.remove("pulsating");
         connectionIndicator.classList.remove("connected");
