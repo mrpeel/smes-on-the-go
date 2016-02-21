@@ -5,28 +5,34 @@
 var SMESMarkStore = function () {
     "use strict";
 
-    this.useLocalStore = this.localStorageAvailable();
-    this.maxRequests = 15;
-    this.perNumberOfSeconds = 60;
-    this.lastStorageTimeStamp = Date.now();
-    this.baseURL = 'https://maps.land.vic.gov.au/lvis/services/smesDataDelivery';
-    this.updateIndex = [];
-    this.newIndex = [];
-    this.tooManyMarks = false;
+    var smesMarkStore = this;
 
-    if (this.useLocalStore) {
-        this.retrieveStoredMarks();
+    smesMarkStore.useLocalStore = smesMarkStore.localStorageAvailable();
+    smesMarkStore.maxRequests = 15;
+    smesMarkStore.perNumberOfSeconds = 60;
+    smesMarkStore.lastStorageTimeStamp = Date.now();
+    smesMarkStore.baseURL = 'https://maps.land.vic.gov.au/lvis/services/smesDataDelivery';
+    smesMarkStore.updateIndex = [];
+    smesMarkStore.newIndex = [];
+    smesMarkStore.tooManyMarks = false;
+
+    if (smesMarkStore.useLocalStore) {
+        smesMarkStore.retrieveStoredMarks();
     } else {
-        this.markData = {};
+        smesMarkStore.markData = {};
     }
 
-    var self = this;
 
     //Add a before unload event to write marks to storage
     window.addEventListener("beforeunload", function (e) {
         // Do something
-        self.executeSaveMarks();
+        smesMarkStore.executeSaveMarks();
     }, false);
+
+    //After current processing is finished, remove any marks older than 14 days
+    window.setTimeout(function () {
+        smesMarkStore.markData = smesMarkStore.removeOldMarks(14);
+    }, 0);
 };
 
 
@@ -47,25 +53,24 @@ SMESMarkStore.prototype.localStorageAvailable = function () {
 SMESMarkStore.prototype.retrieveStoredMarks = function () {
     "use strict";
 
+    var smesMarkStore = this;
     var storedData, mark;
 
-    if (!this.useLocalStore) {
+    if (!smesMarkStore.useLocalStore) {
         return;
     }
 
     storedData = window.localStorage.getItem('smes-mark-data');
 
     if (storedData) {
-        this.markData = JSON.parse(storedData);
-        //Remove data older than 14 days
-        this.markData = this.removeOldMarks(14);
+        smesMarkStore.markData = JSON.parse(storedData);
         //Add all marks to the new mark index - to ensure they will get loaded to the UI
-        for (mark in this.markData) {
-            this.newIndex.push(mark);
+        for (mark in smesMarkStore.markData) {
+            smesMarkStore.newIndex.push(mark);
         }
 
     } else {
-        this.markData = {};
+        smesMarkStore.markData = {};
     }
 
 
@@ -76,8 +81,9 @@ SMESMarkStore.prototype.retrieveStoredMarks = function () {
 SMESMarkStore.prototype.clearStoredMarks = function () {
     "use strict";
 
+    var smesMarkStore = this;
 
-    if (!this.useLocalStore) {
+    if (!smesMarkStore.useLocalStore) {
         return;
     }
 
@@ -88,22 +94,23 @@ SMESMarkStore.prototype.clearStoredMarks = function () {
 SMESMarkStore.prototype.saveMarksToStorage = function () {
     "use strict";
 
-    if (!this.useLocalStore) {
+    var smesMarkStore = this;
+
+    if (!smesMarkStore.useLocalStore) {
         return;
     }
 
-    var self = this;
     var storageTimeStamp;
 
     //Set timestamp for last storage
-    self.lastStorageTimeStamp = Date.now();
-    storageTimeStamp = self.lastStorageTimeStamp;
+    smesMarkStore.lastStorageTimeStamp = Date.now();
+    storageTimeStamp = smesMarkStore.lastStorageTimeStamp;
 
     //Set function to write storage after 5 minutes.
-    // if another write request comes in within 5 minutes, this.lastStorageTimeStamp variable will have changed and the write will be aborted.
+    // if another write request comes in within 5 minutes, smesMarkStore.lastStorageTimeStamp variable will have changed and the write will be aborted.
     window.setTimeout(function () {
-        if (storageTimeStamp === self.lastStorageTimeStamp) {
-            self.executeSaveMarks();
+        if (storageTimeStamp === smesMarkStore.lastStorageTimeStamp) {
+            smesMarkStore.executeSaveMarks();
 
         }
     }, 300000);
@@ -114,21 +121,21 @@ SMESMarkStore.prototype.executeSaveMarks = function () {
     "use strict";
 
     var culledMarkData;
-    var self = this;
+    var smesMarkStore = this;
 
     try {
-        window.localStorage.setItem('smes-mark-data', JSON.stringify(self.markData));
+        window.localStorage.setItem('smes-mark-data', JSON.stringify(smesMarkStore.markData));
         console.log("Data written to local storage");
     } catch (e) {
         try {
             //Check total size - if >= 5MB then start culling - attempt to only store marks retrieved within the last 7 days
             if (JSON.stringify(culledMarkData).length > 5000000) {
-                culledMarkData = self.removeOldMarks(7);
+                culledMarkData = smesMarkStore.removeOldMarks(7);
             }
 
             //Check total size - if still >= 5MB then start culling - attempt to only store marks retrieved in the last day
             if (JSON.stringify(culledMarkData).length > 5000000) {
-                culledMarkData = self.removeOldMarks(7);
+                culledMarkData = smesMarkStore.removeOldMarks(7);
             }
 
             window.localStorage.setItem('smes-mark-data', JSON.stringify(culledMarkData));
@@ -142,12 +149,13 @@ SMESMarkStore.prototype.executeSaveMarks = function () {
 SMESMarkStore.prototype.removeOldMarks = function (numberOfDays) {
     "use strict";
 
+    var smesMarkStore = this;
     var individualMark;
     var comparisonDate;
-    var newMarkData = this.markData;
+    var newMarkData = smesMarkStore.markData;
 
     for (individualMark in newMarkData) {
-        if (this.isNumberOfDaysOld(newMarkData[individualMark].lastUpdated, numberOfDays)) {
+        if (smesMarkStore.isNumberOfDaysOld(newMarkData[individualMark].lastUpdated, numberOfDays)) {
             delete newMarkData[individualMark];
         }
     }
@@ -181,17 +189,17 @@ SMESMarkStore.prototype.isNumberOfDaysOld = function (dateValue, number) {
 SMESMarkStore.prototype.delayNextRequest = function () {
     "use strict";
 
-    var self = this;
+    var smesMarkStore = this;
 
     //Set the last succesfull request in the future to prevent requests happening (clean-up if a 429 error has been triggered and need to back off)
-    self.lastSuccesfullRetrieve = Date.now() + 20000;
+    smesMarkStore.lastSuccesfullRetrieve = Date.now() + 20000;
 
 };
 
 SMESMarkStore.prototype.requestMarkInformation = function (cLat, cLong, cRadius, callback, tooManyCallback) {
     "use strict";
 
-    var self = this;
+    var smesMarkStore = this;
     var currentRequestTimeStamp = new Date();
     //Set minimum time daly before executing web service request - this functions as a de-bounce operation
     var executionDelay = 500;
@@ -202,14 +210,14 @@ SMESMarkStore.prototype.requestMarkInformation = function (cLat, cLong, cRadius,
     }
 
     //Record the last request queued time
-    self.lastQueuedTimeStamp = currentRequestTimeStamp;
-    var minInterval = (self.perNumberOfSeconds / self.maxRequests) * 1000;
+    smesMarkStore.lastQueuedTimeStamp = currentRequestTimeStamp;
+    var minInterval = (smesMarkStore.perNumberOfSeconds / smesMarkStore.maxRequests) * 1000;
 
 
     //If there has already been a request to the server, make sure this request doesn't execute until the minimum interval time
-    if (self.lastSuccesfullRetrieve) {
+    if (smesMarkStore.lastSuccesfullRetrieve) {
         //Calulate the interval since tghe last request went through
-        var currentInterval = currentRequestTimeStamp - self.lastSuccesfullRetrieve;
+        var currentInterval = currentRequestTimeStamp - smesMarkStore.lastSuccesfullRetrieve;
 
         //Reset execution delay to the remaining interval plus the standard execution delay
         if (currentInterval < minInterval) {
@@ -220,22 +228,22 @@ SMESMarkStore.prototype.requestMarkInformation = function (cLat, cLong, cRadius,
     //Execute the logic after the appropriate wait
     window.setTimeout(function () {
         //Check if this is still the most recently queued request
-        if (currentRequestTimeStamp === self.lastQueuedTimeStamp) {
+        if (currentRequestTimeStamp === smesMarkStore.lastQueuedTimeStamp) {
             console.log("Processing request");
-            self.lastSuccesfullRetrieve = new Date();
-            self.retrieveMarkInformation(cLat, cLong, cRadius).then(function (marksRetrieved) {
+            smesMarkStore.lastSuccesfullRetrieve = new Date();
+            smesMarkStore.retrieveMarkInformation(cLat, cLong, cRadius).then(function (marksRetrieved) {
                 //Check data element is present, if so process it, and run the callback function
                 if (marksRetrieved) {
-                    self.processRetrievedMarks(marksRetrieved).then(function () {
+                    smesMarkStore.processRetrievedMarks(marksRetrieved).then(function () {
                         console.log("Executing callback");
-                        self.tooManyMarks = false;
+                        smesMarkStore.tooManyMarks = false;
                         callback.apply(this);
                     });
 
                 }
             }).catch(function (err) {
                 if (err === "Too many marks") {
-                    self.tooManyMarks = true;
+                    smesMarkStore.tooManyMarks = true;
                     tooManyCallback.apply(this);
                 }
                 console.log(err);
@@ -252,38 +260,38 @@ SMESMarkStore.prototype.requestMarkInformation = function (cLat, cLong, cRadius,
 SMESMarkStore.prototype.processRetrievedMarks = function (retrievedData) {
     "use strict";
 
-    var self = this;
+    var smesMarkStore = this;
     var dataObject, objectProp;
 
     return new Promise(function (resolve, reject) {
 
 
         //reset indexes of new and updates marks
-        self.updateIndex = [];
-        self.newIndex = [];
+        smesMarkStore.updateIndex = [];
+        smesMarkStore.newIndex = [];
 
-        //console.log("Mark count: " + self.countMarks());
+        //console.log("Mark count: " + smesMarkStore.countMarks());
 
         for (var i = 0; i < retrievedData.length; i++) {
             dataObject = retrievedData[i];
 
             //Check whether this mark is already in the store
-            if (!self.markData[dataObject.nineFigureNumber]) {
+            if (!smesMarkStore.markData[dataObject.nineFigureNumber]) {
                 //Don't have mark, so add it
-                self.addUpdateValueInStore(dataObject);
-                self.newIndex.push(dataObject.nineFigureNumber);
+                smesMarkStore.addUpdateValueInStore(dataObject);
+                smesMarkStore.newIndex.push(dataObject.nineFigureNumber);
 
             } else {
                 //Already have this mark - Check whether the mark was last retrieved within a day
-                if (self.isNumberOfDaysOld(self.markData[dataObject.nineFigureNumber].lastUpdated || 0, 1)) {
+                if (smesMarkStore.isNumberOfDaysOld(smesMarkStore.markData[dataObject.nineFigureNumber].lastUpdated || 0, 1)) {
                     //Check whether mark information has changed
-                    if (JSON.stringify(dataObject) !== JSON.stringify(self.markData[dataObject.nineFigureNumber].data)) {
+                    if (JSON.stringify(dataObject) !== JSON.stringify(smesMarkStore.markData[dataObject.nineFigureNumber].data)) {
                         //data has changed so store data, store hash, remove address, and update lastUpdated
-                        self.addUpdateValueInStore(dataObject);
-                        self.updateIndex.push(dataObject.nineFigureNumber);
+                        smesMarkStore.addUpdateValueInStore(dataObject);
+                        smesMarkStore.updateIndex.push(dataObject.nineFigureNumber);
                     } else {
                         //Latest data is the same so change the lastUpdated value to now
-                        self.markData[dataObject.nineFigureNumber].lastUpdated = Date.now();
+                        smesMarkStore.markData[dataObject.nineFigureNumber].lastUpdated = Date.now();
                     }
                 }
 
@@ -293,10 +301,10 @@ SMESMarkStore.prototype.processRetrievedMarks = function (retrievedData) {
 
         resolve(true);
 
-        //console.log("Mark count: " + self.countMarks());
+        //console.log("Mark count: " + smesMarkStore.countMarks());
 
         //Trigger process to save marks into browser storage
-        self.saveMarksToStorage();
+        smesMarkStore.saveMarksToStorage();
 
     });
 
@@ -307,13 +315,13 @@ SMESMarkStore.prototype.processRetrievedMarks = function (retrievedData) {
 SMESMarkStore.prototype.countMarks = function () {
     "use strict";
 
-    var self = this;
+    var smesMarkStore = this;
     var objectProp;
     var markCounter = 0;
 
 
     //Simple concatenation of the properties of the object - up to 24 vals
-    for (objectProp in self.markData) {
+    for (objectProp in smesMarkStore.markData) {
         markCounter += 1;
     }
 
@@ -323,27 +331,33 @@ SMESMarkStore.prototype.countMarks = function () {
 SMESMarkStore.prototype.addUpdateValueInStore = function (dataObject) {
     "use strict";
 
-    if (!this.markData[dataObject.nineFigureNumber]) {
-        this.markData[dataObject.nineFigureNumber] = {};
+    var smesMarkStore = this;
+
+    if (!smesMarkStore.markData[dataObject.nineFigureNumber]) {
+        smesMarkStore.markData[dataObject.nineFigureNumber] = {};
     }
 
-    this.markData[dataObject.nineFigureNumber].data = dataObject;
-    delete this.markData[dataObject.nineFigureNumber].address;
-    this.markData[dataObject.nineFigureNumber].lastUpdated = Date.now();
+    smesMarkStore.markData[dataObject.nineFigureNumber].data = dataObject;
+    delete smesMarkStore.markData[dataObject.nineFigureNumber].address;
+    smesMarkStore.markData[dataObject.nineFigureNumber].lastUpdated = Date.now();
 
 };
 
 SMESMarkStore.prototype.setAddress = function (nineFigureNumber, address) {
     "use strict";
 
-    this.markData[nineFigureNumber].address = address;
+    var smesMarkStore = this;
+
+    smesMarkStore.markData[nineFigureNumber].address = address;
 
 };
 
 SMESMarkStore.prototype.returnAddress = function (nineFigureNumber) {
     "use strict";
 
-    var surveyMark = this.markData[nineFigureNumber] || null;
+    var smesMarkStore = this;
+
+    var surveyMark = smesMarkStore.markData[nineFigureNumber] || null;
     return surveyMark.address || "";
 
 };
@@ -357,18 +371,18 @@ SMESMarkStore.prototype.returnAddress = function (nineFigureNumber) {
 SMESMarkStore.prototype.retrieveMarkInformation = function (cLat, cLong, cRadius) {
     "use strict";
 
-    var self = this;
+    var smesMarkStore = this;
 
     return new Promise(function (resolve, reject) {
 
-        /*xr.get(self.baseURL + '/getMarkInformation', {
+        /*xr.get(smesMarkStore.baseURL + '/getMarkInformation', {
                 searchType: "Location",
                 latitude: cLat,
                 longitude: cLong,
                 radius: cRadius,
                 format: "Full"
             })*/
-        fetch(self.baseURL + "/getMarkInformation?searchType=Location&latitude=" + cLat + "&longitude=" + cLong + "&radius=" + cRadius + "&format=Full", {
+        fetch(smesMarkStore.baseURL + "/getMarkInformation?searchType=Location&latitude=" + cLat + "&longitude=" + cLong + "&radius=" + cRadius + "&format=Full", {
                 mode: 'cors'
             }).then(function (response) {
                 return response.json();
@@ -401,7 +415,7 @@ SMESMarkStore.prototype.retrieveMarkInformation = function (cLat, cLong, cRadius
             .catch(function (err) {
                 console.log(err);
                 //if (xr.status === 0 && xr.response === "") {
-                self.delayNextRequest();
+                smesMarkStore.delayNextRequest();
                 console.log("Too many requests");
                 //}
                 return Promise.reject(err);
@@ -419,15 +433,15 @@ SMESMarkStore.prototype.retrieveMarkInformation = function (cLat, cLong, cRadius
 SMESMarkStore.prototype.getSurveyMarkSketchResponse = function (nineFigureNumber) {
     "use strict";
 
-    var self = this;
+    var smesMarkStore = this;
 
     return new Promise(function (resolve, reject) {
-        fetch(self.baseURL + "/getSurveyMarkSketches?returnDefective=true&markList=" + nineFigureNumber, {
+        fetch(smesMarkStore.baseURL + "/getSurveyMarkSketches?returnDefective=true&markList=" + nineFigureNumber, {
                 mode: 'cors'
             }).then(function (response) {
                 return response.json();
             })
-            /*xr.get(self.baseURL + '/getSurveyMarkSketches', {
+            /*xr.get(smesMarkStore.baseURL + '/getSurveyMarkSketches', {
                     markList: nineFigureNumber,
                     returnDefective: true
                 })*/
@@ -460,14 +474,14 @@ SMESMarkStore.prototype.getSurveyMarkSketchResponse = function (nineFigureNumber
 SMESMarkStore.prototype.getSurveyMarkReportResponse = function (nineFigureNumber) {
     "use strict";
 
-    var self = this;
+    var smesMarkStore = this;
 
     return new Promise(function (resolve, reject) {
-        /*xr.get(self.baseURL + '/getSurveyMarkReports', {
+        /*xr.get(smesMarkStore.baseURL + '/getSurveyMarkReports', {
                 markList: nineFigureNumber,
                 returnDefective: true
             })*/
-        fetch(self.baseURL + "/getSurveyMarkReports?returnDefective=true&markList=" + nineFigureNumber, {
+        fetch(smesMarkStore.baseURL + "/getSurveyMarkReports?returnDefective=true&markList=" + nineFigureNumber, {
             mode: 'cors'
         }).then(function (response) {
             return response.json();

@@ -5,28 +5,34 @@
 var SMESMarkStore = function () {
     "use strict";
 
-    this.useLocalStore = this.localStorageAvailable();
-    this.maxRequests = 15;
-    this.perNumberOfSeconds = 60;
-    this.lastStorageTimeStamp = Date.now();
-    this.baseURL = 'https://maps.land.vic.gov.au/lvis/services/smesDataDelivery';
-    this.updateIndex = [];
-    this.newIndex = [];
-    this.tooManyMarks = false;
+    var smesMarkStore = this;
 
-    if (this.useLocalStore) {
-        this.retrieveStoredMarks();
+    smesMarkStore.useLocalStore = smesMarkStore.localStorageAvailable();
+    smesMarkStore.maxRequests = 15;
+    smesMarkStore.perNumberOfSeconds = 60;
+    smesMarkStore.lastStorageTimeStamp = Date.now();
+    smesMarkStore.baseURL = 'https://maps.land.vic.gov.au/lvis/services/smesDataDelivery';
+    smesMarkStore.updateIndex = [];
+    smesMarkStore.newIndex = [];
+    smesMarkStore.tooManyMarks = false;
+
+    if (smesMarkStore.useLocalStore) {
+        smesMarkStore.retrieveStoredMarks();
     } else {
-        this.markData = {};
+        smesMarkStore.markData = {};
     }
 
-    var self = this;
 
     //Add a before unload event to write marks to storage
     window.addEventListener("beforeunload", function (e) {
         // Do something
-        self.executeSaveMarks();
+        smesMarkStore.executeSaveMarks();
     }, false);
+
+    //After current processing is finished, remove any marks older than 14 days
+    window.setTimeout(function () {
+        smesMarkStore.markData = smesMarkStore.removeOldMarks(14);
+    }, 0);
 };
 
 
@@ -47,25 +53,24 @@ SMESMarkStore.prototype.localStorageAvailable = function () {
 SMESMarkStore.prototype.retrieveStoredMarks = function () {
     "use strict";
 
+    var smesMarkStore = this;
     var storedData, mark;
 
-    if (!this.useLocalStore) {
+    if (!smesMarkStore.useLocalStore) {
         return;
     }
 
     storedData = window.localStorage.getItem('smes-mark-data');
 
     if (storedData) {
-        this.markData = JSON.parse(storedData);
-        //Remove data older than 14 days
-        this.markData = this.removeOldMarks(14);
+        smesMarkStore.markData = JSON.parse(storedData);
         //Add all marks to the new mark index - to ensure they will get loaded to the UI
-        for (mark in this.markData) {
-            this.newIndex.push(mark);
+        for (mark in smesMarkStore.markData) {
+            smesMarkStore.newIndex.push(mark);
         }
 
     } else {
-        this.markData = {};
+        smesMarkStore.markData = {};
     }
 
 
@@ -76,8 +81,9 @@ SMESMarkStore.prototype.retrieveStoredMarks = function () {
 SMESMarkStore.prototype.clearStoredMarks = function () {
     "use strict";
 
+    var smesMarkStore = this;
 
-    if (!this.useLocalStore) {
+    if (!smesMarkStore.useLocalStore) {
         return;
     }
 
@@ -88,22 +94,23 @@ SMESMarkStore.prototype.clearStoredMarks = function () {
 SMESMarkStore.prototype.saveMarksToStorage = function () {
     "use strict";
 
-    if (!this.useLocalStore) {
+    var smesMarkStore = this;
+
+    if (!smesMarkStore.useLocalStore) {
         return;
     }
 
-    var self = this;
     var storageTimeStamp;
 
     //Set timestamp for last storage
-    self.lastStorageTimeStamp = Date.now();
-    storageTimeStamp = self.lastStorageTimeStamp;
+    smesMarkStore.lastStorageTimeStamp = Date.now();
+    storageTimeStamp = smesMarkStore.lastStorageTimeStamp;
 
     //Set function to write storage after 5 minutes.
-    // if another write request comes in within 5 minutes, this.lastStorageTimeStamp variable will have changed and the write will be aborted.
+    // if another write request comes in within 5 minutes, smesMarkStore.lastStorageTimeStamp variable will have changed and the write will be aborted.
     window.setTimeout(function () {
-        if (storageTimeStamp === self.lastStorageTimeStamp) {
-            self.executeSaveMarks();
+        if (storageTimeStamp === smesMarkStore.lastStorageTimeStamp) {
+            smesMarkStore.executeSaveMarks();
 
         }
     }, 300000);
@@ -114,21 +121,21 @@ SMESMarkStore.prototype.executeSaveMarks = function () {
     "use strict";
 
     var culledMarkData;
-    var self = this;
+    var smesMarkStore = this;
 
     try {
-        window.localStorage.setItem('smes-mark-data', JSON.stringify(self.markData));
+        window.localStorage.setItem('smes-mark-data', JSON.stringify(smesMarkStore.markData));
         console.log("Data written to local storage");
     } catch (e) {
         try {
             //Check total size - if >= 5MB then start culling - attempt to only store marks retrieved within the last 7 days
             if (JSON.stringify(culledMarkData).length > 5000000) {
-                culledMarkData = self.removeOldMarks(7);
+                culledMarkData = smesMarkStore.removeOldMarks(7);
             }
 
             //Check total size - if still >= 5MB then start culling - attempt to only store marks retrieved in the last day
             if (JSON.stringify(culledMarkData).length > 5000000) {
-                culledMarkData = self.removeOldMarks(7);
+                culledMarkData = smesMarkStore.removeOldMarks(7);
             }
 
             window.localStorage.setItem('smes-mark-data', JSON.stringify(culledMarkData));
@@ -142,12 +149,13 @@ SMESMarkStore.prototype.executeSaveMarks = function () {
 SMESMarkStore.prototype.removeOldMarks = function (numberOfDays) {
     "use strict";
 
+    var smesMarkStore = this;
     var individualMark;
     var comparisonDate;
-    var newMarkData = this.markData;
+    var newMarkData = smesMarkStore.markData;
 
     for (individualMark in newMarkData) {
-        if (this.isNumberOfDaysOld(newMarkData[individualMark].lastUpdated, numberOfDays)) {
+        if (smesMarkStore.isNumberOfDaysOld(newMarkData[individualMark].lastUpdated, numberOfDays)) {
             delete newMarkData[individualMark];
         }
     }
@@ -181,17 +189,17 @@ SMESMarkStore.prototype.isNumberOfDaysOld = function (dateValue, number) {
 SMESMarkStore.prototype.delayNextRequest = function () {
     "use strict";
 
-    var self = this;
+    var smesMarkStore = this;
 
     //Set the last succesfull request in the future to prevent requests happening (clean-up if a 429 error has been triggered and need to back off)
-    self.lastSuccesfullRetrieve = Date.now() + 20000;
+    smesMarkStore.lastSuccesfullRetrieve = Date.now() + 20000;
 
 };
 
 SMESMarkStore.prototype.requestMarkInformation = function (cLat, cLong, cRadius, callback, tooManyCallback) {
     "use strict";
 
-    var self = this;
+    var smesMarkStore = this;
     var currentRequestTimeStamp = new Date();
     //Set minimum time daly before executing web service request - this functions as a de-bounce operation
     var executionDelay = 500;
@@ -202,14 +210,14 @@ SMESMarkStore.prototype.requestMarkInformation = function (cLat, cLong, cRadius,
     }
 
     //Record the last request queued time
-    self.lastQueuedTimeStamp = currentRequestTimeStamp;
-    var minInterval = (self.perNumberOfSeconds / self.maxRequests) * 1000;
+    smesMarkStore.lastQueuedTimeStamp = currentRequestTimeStamp;
+    var minInterval = (smesMarkStore.perNumberOfSeconds / smesMarkStore.maxRequests) * 1000;
 
 
     //If there has already been a request to the server, make sure this request doesn't execute until the minimum interval time
-    if (self.lastSuccesfullRetrieve) {
+    if (smesMarkStore.lastSuccesfullRetrieve) {
         //Calulate the interval since tghe last request went through
-        var currentInterval = currentRequestTimeStamp - self.lastSuccesfullRetrieve;
+        var currentInterval = currentRequestTimeStamp - smesMarkStore.lastSuccesfullRetrieve;
 
         //Reset execution delay to the remaining interval plus the standard execution delay
         if (currentInterval < minInterval) {
@@ -220,22 +228,22 @@ SMESMarkStore.prototype.requestMarkInformation = function (cLat, cLong, cRadius,
     //Execute the logic after the appropriate wait
     window.setTimeout(function () {
         //Check if this is still the most recently queued request
-        if (currentRequestTimeStamp === self.lastQueuedTimeStamp) {
+        if (currentRequestTimeStamp === smesMarkStore.lastQueuedTimeStamp) {
             console.log("Processing request");
-            self.lastSuccesfullRetrieve = new Date();
-            self.retrieveMarkInformation(cLat, cLong, cRadius).then(function (marksRetrieved) {
+            smesMarkStore.lastSuccesfullRetrieve = new Date();
+            smesMarkStore.retrieveMarkInformation(cLat, cLong, cRadius).then(function (marksRetrieved) {
                 //Check data element is present, if so process it, and run the callback function
                 if (marksRetrieved) {
-                    self.processRetrievedMarks(marksRetrieved).then(function () {
+                    smesMarkStore.processRetrievedMarks(marksRetrieved).then(function () {
                         console.log("Executing callback");
-                        self.tooManyMarks = false;
+                        smesMarkStore.tooManyMarks = false;
                         callback.apply(this);
                     });
 
                 }
             }).catch(function (err) {
                 if (err === "Too many marks") {
-                    self.tooManyMarks = true;
+                    smesMarkStore.tooManyMarks = true;
                     tooManyCallback.apply(this);
                 }
                 console.log(err);
@@ -252,38 +260,38 @@ SMESMarkStore.prototype.requestMarkInformation = function (cLat, cLong, cRadius,
 SMESMarkStore.prototype.processRetrievedMarks = function (retrievedData) {
     "use strict";
 
-    var self = this;
+    var smesMarkStore = this;
     var dataObject, objectProp;
 
     return new Promise(function (resolve, reject) {
 
 
         //reset indexes of new and updates marks
-        self.updateIndex = [];
-        self.newIndex = [];
+        smesMarkStore.updateIndex = [];
+        smesMarkStore.newIndex = [];
 
-        //console.log("Mark count: " + self.countMarks());
+        //console.log("Mark count: " + smesMarkStore.countMarks());
 
         for (var i = 0; i < retrievedData.length; i++) {
             dataObject = retrievedData[i];
 
             //Check whether this mark is already in the store
-            if (!self.markData[dataObject.nineFigureNumber]) {
+            if (!smesMarkStore.markData[dataObject.nineFigureNumber]) {
                 //Don't have mark, so add it
-                self.addUpdateValueInStore(dataObject);
-                self.newIndex.push(dataObject.nineFigureNumber);
+                smesMarkStore.addUpdateValueInStore(dataObject);
+                smesMarkStore.newIndex.push(dataObject.nineFigureNumber);
 
             } else {
                 //Already have this mark - Check whether the mark was last retrieved within a day
-                if (self.isNumberOfDaysOld(self.markData[dataObject.nineFigureNumber].lastUpdated || 0, 1)) {
+                if (smesMarkStore.isNumberOfDaysOld(smesMarkStore.markData[dataObject.nineFigureNumber].lastUpdated || 0, 1)) {
                     //Check whether mark information has changed
-                    if (JSON.stringify(dataObject) !== JSON.stringify(self.markData[dataObject.nineFigureNumber].data)) {
+                    if (JSON.stringify(dataObject) !== JSON.stringify(smesMarkStore.markData[dataObject.nineFigureNumber].data)) {
                         //data has changed so store data, store hash, remove address, and update lastUpdated
-                        self.addUpdateValueInStore(dataObject);
-                        self.updateIndex.push(dataObject.nineFigureNumber);
+                        smesMarkStore.addUpdateValueInStore(dataObject);
+                        smesMarkStore.updateIndex.push(dataObject.nineFigureNumber);
                     } else {
                         //Latest data is the same so change the lastUpdated value to now
-                        self.markData[dataObject.nineFigureNumber].lastUpdated = Date.now();
+                        smesMarkStore.markData[dataObject.nineFigureNumber].lastUpdated = Date.now();
                     }
                 }
 
@@ -293,10 +301,10 @@ SMESMarkStore.prototype.processRetrievedMarks = function (retrievedData) {
 
         resolve(true);
 
-        //console.log("Mark count: " + self.countMarks());
+        //console.log("Mark count: " + smesMarkStore.countMarks());
 
         //Trigger process to save marks into browser storage
-        self.saveMarksToStorage();
+        smesMarkStore.saveMarksToStorage();
 
     });
 
@@ -307,13 +315,13 @@ SMESMarkStore.prototype.processRetrievedMarks = function (retrievedData) {
 SMESMarkStore.prototype.countMarks = function () {
     "use strict";
 
-    var self = this;
+    var smesMarkStore = this;
     var objectProp;
     var markCounter = 0;
 
 
     //Simple concatenation of the properties of the object - up to 24 vals
-    for (objectProp in self.markData) {
+    for (objectProp in smesMarkStore.markData) {
         markCounter += 1;
     }
 
@@ -323,27 +331,33 @@ SMESMarkStore.prototype.countMarks = function () {
 SMESMarkStore.prototype.addUpdateValueInStore = function (dataObject) {
     "use strict";
 
-    if (!this.markData[dataObject.nineFigureNumber]) {
-        this.markData[dataObject.nineFigureNumber] = {};
+    var smesMarkStore = this;
+
+    if (!smesMarkStore.markData[dataObject.nineFigureNumber]) {
+        smesMarkStore.markData[dataObject.nineFigureNumber] = {};
     }
 
-    this.markData[dataObject.nineFigureNumber].data = dataObject;
-    delete this.markData[dataObject.nineFigureNumber].address;
-    this.markData[dataObject.nineFigureNumber].lastUpdated = Date.now();
+    smesMarkStore.markData[dataObject.nineFigureNumber].data = dataObject;
+    delete smesMarkStore.markData[dataObject.nineFigureNumber].address;
+    smesMarkStore.markData[dataObject.nineFigureNumber].lastUpdated = Date.now();
 
 };
 
 SMESMarkStore.prototype.setAddress = function (nineFigureNumber, address) {
     "use strict";
 
-    this.markData[nineFigureNumber].address = address;
+    var smesMarkStore = this;
+
+    smesMarkStore.markData[nineFigureNumber].address = address;
 
 };
 
 SMESMarkStore.prototype.returnAddress = function (nineFigureNumber) {
     "use strict";
 
-    var surveyMark = this.markData[nineFigureNumber] || null;
+    var smesMarkStore = this;
+
+    var surveyMark = smesMarkStore.markData[nineFigureNumber] || null;
     return surveyMark.address || "";
 
 };
@@ -357,18 +371,18 @@ SMESMarkStore.prototype.returnAddress = function (nineFigureNumber) {
 SMESMarkStore.prototype.retrieveMarkInformation = function (cLat, cLong, cRadius) {
     "use strict";
 
-    var self = this;
+    var smesMarkStore = this;
 
     return new Promise(function (resolve, reject) {
 
-        /*xr.get(self.baseURL + '/getMarkInformation', {
+        /*xr.get(smesMarkStore.baseURL + '/getMarkInformation', {
                 searchType: "Location",
                 latitude: cLat,
                 longitude: cLong,
                 radius: cRadius,
                 format: "Full"
             })*/
-        fetch(self.baseURL + "/getMarkInformation?searchType=Location&latitude=" + cLat + "&longitude=" + cLong + "&radius=" + cRadius + "&format=Full", {
+        fetch(smesMarkStore.baseURL + "/getMarkInformation?searchType=Location&latitude=" + cLat + "&longitude=" + cLong + "&radius=" + cRadius + "&format=Full", {
                 mode: 'cors'
             }).then(function (response) {
                 return response.json();
@@ -401,7 +415,7 @@ SMESMarkStore.prototype.retrieveMarkInformation = function (cLat, cLong, cRadius
             .catch(function (err) {
                 console.log(err);
                 //if (xr.status === 0 && xr.response === "") {
-                self.delayNextRequest();
+                smesMarkStore.delayNextRequest();
                 console.log("Too many requests");
                 //}
                 return Promise.reject(err);
@@ -419,15 +433,15 @@ SMESMarkStore.prototype.retrieveMarkInformation = function (cLat, cLong, cRadius
 SMESMarkStore.prototype.getSurveyMarkSketchResponse = function (nineFigureNumber) {
     "use strict";
 
-    var self = this;
+    var smesMarkStore = this;
 
     return new Promise(function (resolve, reject) {
-        fetch(self.baseURL + "/getSurveyMarkSketches?returnDefective=true&markList=" + nineFigureNumber, {
+        fetch(smesMarkStore.baseURL + "/getSurveyMarkSketches?returnDefective=true&markList=" + nineFigureNumber, {
                 mode: 'cors'
             }).then(function (response) {
                 return response.json();
             })
-            /*xr.get(self.baseURL + '/getSurveyMarkSketches', {
+            /*xr.get(smesMarkStore.baseURL + '/getSurveyMarkSketches', {
                     markList: nineFigureNumber,
                     returnDefective: true
                 })*/
@@ -460,14 +474,14 @@ SMESMarkStore.prototype.getSurveyMarkSketchResponse = function (nineFigureNumber
 SMESMarkStore.prototype.getSurveyMarkReportResponse = function (nineFigureNumber) {
     "use strict";
 
-    var self = this;
+    var smesMarkStore = this;
 
     return new Promise(function (resolve, reject) {
-        /*xr.get(self.baseURL + '/getSurveyMarkReports', {
+        /*xr.get(smesMarkStore.baseURL + '/getSurveyMarkReports', {
                 markList: nineFigureNumber,
                 returnDefective: true
             })*/
-        fetch(self.baseURL + "/getSurveyMarkReports?returnDefective=true&markList=" + nineFigureNumber, {
+        fetch(smesMarkStore.baseURL + "/getSurveyMarkReports?returnDefective=true&markList=" + nineFigureNumber, {
             mode: 'cors'
         }).then(function (response) {
             return response.json();
@@ -529,8 +543,9 @@ var SMESGMap = function (elementId, options) {
     "use strict";
 
     var melbourneCenter = new google.maps.LatLng(-37.813942, 144.9711861);
+    var smesGMap = this;
 
-    this.setupMapStyles();
+    smesGMap.setupMapStyles();
 
     options = options || {};
 
@@ -551,22 +566,22 @@ var SMESGMap = function (elementId, options) {
         },
         panControl: false,
         rotateControl: false,
-        styles: this.mapStyles.iovation
+        styles: smesGMap.mapStyles.iovation
     };
 
-    this.mapOptions = options.mapOptions;
+    smesGMap.mapOptions = options.mapOptions;
 
-    this.markers = [];
-    this.labels = [];
-    this.currentZoom = 1;
-    this.markerIcons = [];
-    this.markerSize = 10;
-    this.markersHidden = false;
+    smesGMap.markers = [];
+    smesGMap.labels = [];
+    smesGMap.currentZoom = 1;
+    smesGMap.markerIcons = [];
+    smesGMap.markerSize = 10;
+    smesGMap.markersHidden = false;
 
-    this.map = new google.maps.Map(document.getElementById(elementId), this.mapOptions);
-    this.geocoder = new google.maps.Geocoder();
-    this.infoWindow = new google.maps.InfoWindow();
-    this.infoBox = new InfoBox({
+    smesGMap.map = new google.maps.Map(document.getElementById(elementId), smesGMap.mapOptions);
+    smesGMap.geocoder = new google.maps.Geocoder();
+    smesGMap.infoWindow = new google.maps.InfoWindow();
+    smesGMap.infoBox = new InfoBox({
         content: document.getElementById("infobox"),
         disableAutoPan: false,
         maxWidth: 440,
@@ -581,58 +596,57 @@ var SMESGMap = function (elementId, options) {
         infoBoxClearance: new google.maps.Size(4, 4)
     });
 
-    this.getMapPreference();
+    smesGMap.getMapPreference();
 
-    var self = this;
 
-    google.maps.event.addListener(self.map, 'zoom_changed', function () {
-        self.checkSizeofMap();
-        self.setZoomLevel();
+    google.maps.event.addListener(smesGMap.map, 'zoom_changed', function () {
+        smesGMap.checkSizeofMap();
+        smesGMap.setZoomLevel();
     });
 
 
     if (typeof options.zoomChanged === "function") {
-        google.maps.event.addListener(self.map, 'zoom_changed', function (e) {
+        google.maps.event.addListener(smesGMap.map, 'zoom_changed', function (e) {
             if (e === undefined) {
-                e = self;
+                e = smesGMap;
             }
 
-            options.zoomChanged.apply(self, [e]);
+            options.zoomChanged.apply(smesGMap, [e]);
 
         });
 
     }
 
 
-    google.maps.event.addListener(self.map, 'idle', function () {
-        self.resizeIcons();
+    google.maps.event.addListener(smesGMap.map, 'idle', function () {
+        smesGMap.resizeIcons();
     });
 
 
     if (typeof options.idle === "function") {
-        google.maps.event.addListener(self.map, 'idle', function (e) {
+        google.maps.event.addListener(smesGMap.map, 'idle', function (e) {
             if (e === undefined) {
-                e = self;
+                e = smesGMap;
             }
 
-            options.idle.apply(self, [e]);
+            options.idle.apply(smesGMap, [e]);
 
         });
 
     }
 
     /* Enable custom styling when the infobox is displayed*/
-    var lInfoBox = self.infoBox;
+    var lInfoBox = smesGMap.infoBox;
     google.maps.event.addListener(lInfoBox, 'domready', function () {
         var closeButt = document.getElementById("close-info-box");
 
         if (closeButt) {
             closeButt.addEventListener("click", function () {
                 lInfoBox.setVisible(false);
-                self.resetSelectedMarker();
+                smesGMap.resetSelectedMarker();
 
                 if (typeof options.closeInfobox === "function") {
-                    options.closeInfobox.apply(self);
+                    options.closeInfobox.apply(smesGMap);
                 }
 
             });
@@ -642,12 +656,12 @@ var SMESGMap = function (elementId, options) {
 
 
     //Attempt oto move map to current user coordinates
-    self.geoLocate();
+    smesGMap.geoLocate();
     //Make sure infobox is correct size
-    self.resizeInfoBox();
+    smesGMap.resizeInfoBox();
 
     //Set-up resizing
-    window.onresize = self.resizeInfoBox();
+    window.onresize = smesGMap.resizeInfoBox();
 
 
 };
@@ -655,16 +669,16 @@ var SMESGMap = function (elementId, options) {
 SMESGMap.prototype.resizeInfoBox = function () {
     "use strict";
 
-    var self = this;
+    var smesGMap = this;
     var windowWidth = window.innerWidth;
-    var currentBoxWidth = self.infoBox.maxWidth_;
+    var currentBoxWidth = smesGMap.infoBox.maxWidth_;
 
     if ((windowWidth < 440 || currentBoxWidth < 440) && windowWidth !== currentBoxWidth) {
         if (windowWidth > 440) {
             windowWidth = 440;
         }
 
-        self.infoBox.setOptions({
+        smesGMap.infoBox.setOptions({
             maxWidth: windowWidth,
             pixelOffset: new google.maps.Size(windowWidth * -0.5, 0)
         });
@@ -689,18 +703,19 @@ SMESGMap.prototype.localStorageAvailable = function () {
 SMESGMap.prototype.getMapPreference = function () {
     "use strict";
 
-    var storedData,
-        self = this;
+    var smesGMap = this;
+    var storedData;
 
-    if (!self.localStorageAvailable) {
+
+    if (!smesGMap.localStorageAvailable) {
         return;
     }
 
     storedData = window.localStorage.getItem('map-style');
 
     if (storedData) {
-        self.changeMapStyle(storedData);
-        self.mapStyleName = storedData;
+        smesGMap.changeMapStyle(storedData);
+        smesGMap.mapStyleName = storedData;
     }
 
 
@@ -710,7 +725,9 @@ SMESGMap.prototype.getMapPreference = function () {
 SMESGMap.prototype.saveStylePreference = function (stlyeName) {
     "use strict";
 
-    if (!this.localStorageAvailable) {
+    var smesGMap = this;
+
+    if (!smesGMap.localStorageAvailable) {
         return;
     }
 
@@ -727,12 +744,12 @@ SMESGMap.prototype.saveStylePreference = function (stlyeName) {
 SMESGMap.prototype.geoLocate = function () {
     "use strict";
 
-    var self = this;
+    var smesGMap = this;
 
     if (navigator.geolocation) {
         navigator.geolocation.getCurrentPosition(function (position) {
                 var geoPosition = new google.maps.LatLng(position.coords.latitude, position.coords.longitude);
-                self.map.setCenter(geoPosition);
+                smesGMap.map.setCenter(geoPosition);
             },
             function (error) {
                 console.log(error);
@@ -746,7 +763,9 @@ SMESGMap.prototype.geoLocate = function () {
 SMESGMap.prototype.getZoom = function () {
     "use strict";
 
-    return this.map.getZoom();
+    var smesGMap = this;
+
+    return smesGMap.map.getZoom();
 
 };
 
@@ -760,7 +779,7 @@ SMESGMap.prototype.addMarker = function (marker) {
     "use strict";
 
     //Capture local reference of map for use in click functions
-    var self = this;
+    var smesGMap = this;
     var markerLat, markerLng, markerTitle, markerIcon, nineFigureNo, infoWindowContent, eventListeners;
 
     markerLat = marker.lat;
@@ -774,15 +793,15 @@ SMESGMap.prototype.addMarker = function (marker) {
 
     var icon = {
         url: markerIcon + ".svg",
-        size: new google.maps.Size(self.markerSize, self.markerSize),
-        scaledSize: new google.maps.Size(self.markerSize, self.markerSize)
+        size: new google.maps.Size(smesGMap.markerSize, smesGMap.markerSize),
+        scaledSize: new google.maps.Size(smesGMap.markerSize, smesGMap.markerSize)
     };
 
 
     var mapMarker = new google.maps.Marker({
         position: new google.maps.LatLng(markerLat, markerLng),
         title: markerTitle,
-        map: self.map,
+        map: smesGMap.map,
         draggable: false,
         icon: icon,
         animation: google.maps.Animation.DROP,
@@ -793,14 +812,14 @@ SMESGMap.prototype.addMarker = function (marker) {
 
 
     mapMarker.addListener('click', function () {
-        //self.infoWindow.setContent(mapMarker.infoContent); //infoWindowContent);
-        //self.infoWindow.open(self.map, this);
+        //smesGMap.infoWindow.setContent(mapMarker.infoContent); //infoWindowContent);
+        //smesGMap.infoWindow.open(smesGMap.map, this);
         var infoBoxEl = document.getElementById("infobox");
         infoBoxEl.innerHTML = mapMarker.infoContent;
-        self.setSelectedMarker(mapMarker);
-        self.infoBox.open(self.map, this);
-        self.infoBox.setVisible(true);
-        self.map.panTo(mapMarker.position);
+        smesGMap.setSelectedMarker(mapMarker);
+        smesGMap.infoBox.open(smesGMap.map, this);
+        smesGMap.infoBox.setVisible(true);
+        smesGMap.map.panTo(mapMarker.position);
 
 
         if (eventListeners && eventListeners.click) {
@@ -818,10 +837,10 @@ SMESGMap.prototype.addMarker = function (marker) {
     });
 
 
-    self.markers.push(mapMarker);
+    smesGMap.markers.push(mapMarker);
 
     //Check whether marker should be visible or not
-    if (self.markersHidden) {
+    if (smesGMap.markersHidden) {
         mapMarker.setMap(null);
     }
 
@@ -832,7 +851,7 @@ SMESGMap.prototype.updateMarker = function (marker) {
     "use strict";
 
     //Capture local reference of map for use in click functions
-    var self = this;
+    var smesGMap = this;
 
     var markerLat, markerLng, markerTitle, markerIcon, nineFigureNo, infoWindowContent, eventListeners;
     var mapMarker, icon;
@@ -845,9 +864,9 @@ SMESGMap.prototype.updateMarker = function (marker) {
     infoWindowContent = marker.infoWindowContent;
 
 
-    for (var i = 0; i < self.markers.length; i++) {
-        if (self.markers[i].nineFigureNo === nineFigureNo) {
-            mapMarker = self.markers[i];
+    for (var i = 0; i < smesGMap.markers.length; i++) {
+        if (smesGMap.markers[i].nineFigureNo === nineFigureNo) {
+            mapMarker = smesGMap.markers[i];
             break;
         }
     }
@@ -856,8 +875,8 @@ SMESGMap.prototype.updateMarker = function (marker) {
     if (mapMarker) {
         icon = {
             url: markerIcon + ".svg",
-            size: new google.maps.Size(self.markerSize, self.markerSize),
-            scaledSize: new google.maps.Size(self.markerSize, self.markerSize)
+            size: new google.maps.Size(smesGMap.markerSize, smesGMap.markerSize),
+            scaledSize: new google.maps.Size(smesGMap.markerSize, smesGMap.markerSize)
         };
 
         mapMarker.setIcon(icon);
@@ -866,9 +885,9 @@ SMESGMap.prototype.updateMarker = function (marker) {
         mapMarker.infoContent = infoWindowContent;
     }
 
-    for (var j = 0; j < self.markers.length; j++) {
-        if (self.markers[j].nineFigureNo === nineFigureNo) {
-            self.markers.splice(j, 1);
+    for (var j = 0; j < smesGMap.markers.length; j++) {
+        if (smesGMap.markers[j].nineFigureNo === nineFigureNo) {
+            smesGMap.markers.splice(j, 1);
             break;
         }
     }
@@ -878,12 +897,12 @@ SMESGMap.prototype.updateMarker = function (marker) {
 SMESGMap.prototype.setSelectedMarker = function (marker) {
     "use strict";
 
-    var self = this;
+    var smesGMap = this;
     var icon = marker.icon;
     var url = icon.url;
     var newSize;
 
-    self.resetSelectedMarker();
+    smesGMap.resetSelectedMarker();
 
     //Ensure that the shadow version isn't already referenced
     url = url.replace("selected-", "");
@@ -892,7 +911,7 @@ SMESGMap.prototype.setSelectedMarker = function (marker) {
 
     url = url.substr(0, lastSlash + 1) + "selected-" + url.substr(lastSlash + 1);
 
-    newSize = self.markerSize * 2;
+    newSize = smesGMap.markerSize * 2;
     icon.scaledSize = new google.maps.Size(newSize, newSize);
     icon.size = new google.maps.Size(newSize, newSize);
     icon.url = url;
@@ -904,25 +923,25 @@ SMESGMap.prototype.setSelectedMarker = function (marker) {
 SMESGMap.prototype.resetSelectedMarker = function () {
     "use strict";
 
-    var self = this;
+    var smesGMap = this;
     var icon, url;
 
-    for (var i = 0; i < self.markers.length; i++) {
+    for (var i = 0; i < smesGMap.markers.length; i++) {
 
         //Check if icon is larger and reset as necessary
-        if (self.markers[i].isSelected) {
-            icon = self.markers[i].icon;
+        if (smesGMap.markers[i].isSelected) {
+            icon = smesGMap.markers[i].icon;
             url = icon.url;
 
             //Ensure that the shadow version isn't referenced anymore for image
             url = url.replace("selected-", "");
 
-            icon.scaledSize = new google.maps.Size(self.markerSize, self.markerSize);
-            icon.size = new google.maps.Size(self.markerSize, self.markerSize);
+            icon.scaledSize = new google.maps.Size(smesGMap.markerSize, smesGMap.markerSize);
+            icon.size = new google.maps.Size(smesGMap.markerSize, smesGMap.markerSize);
             icon.url = url;
 
-            self.markers[i].setIcon(icon);
-            delete self.markers[i].isSelected;
+            smesGMap.markers[i].setIcon(icon);
+            delete smesGMap.markers[i].isSelected;
         }
     }
 
@@ -931,7 +950,7 @@ SMESGMap.prototype.resetSelectedMarker = function () {
 SMESGMap.prototype.addLabel = function (label) {
     "use strict";
 
-    var self = this;
+    var smesGMap = this;
     var labelContent, nineFigureNo, labelLat, labelLng;
 
     labelLat = label.lat;
@@ -942,7 +961,7 @@ SMESGMap.prototype.addLabel = function (label) {
     var mapLabel = new MapLabel({
         text: labelContent,
         position: new google.maps.LatLng(labelLat, labelLng),
-        map: self.map,
+        map: smesGMap.map,
         minZoom: 19,
         fontFamily: "'Muli', sans-serif",
         strokeWeight: 6,
@@ -953,7 +972,7 @@ SMESGMap.prototype.addLabel = function (label) {
         nineFigureNo: nineFigureNo
     });
 
-    self.labels.push(mapLabel);
+    smesGMap.labels.push(mapLabel);
 
 
 };
@@ -961,7 +980,7 @@ SMESGMap.prototype.addLabel = function (label) {
 SMESGMap.prototype.updateLabel = function (label) {
     "use strict";
 
-    var self = this;
+    var smesGMap = this;
     var labelContent, nineFigureNo, labelLat, labelLng;
     var mapLabel;
 
@@ -970,9 +989,9 @@ SMESGMap.prototype.updateLabel = function (label) {
     labelContent = label.label;
     nineFigureNo = label.nineFigureNo;
 
-    for (var i = 0; i < self.labels.length; i++) {
-        if (self.labels[i].nineFigureNo === nineFigureNo) {
-            mapLabel = self.labels[i];
+    for (var i = 0; i < smesGMap.labels.length; i++) {
+        if (smesGMap.labels[i].nineFigureNo === nineFigureNo) {
+            mapLabel = smesGMap.labels[i];
             break;
         }
     }
@@ -988,29 +1007,29 @@ SMESGMap.prototype.updateLabel = function (label) {
 SMESGMap.prototype.setZoomLevel = function () {
     "use strict";
 
-    var self = this;
-    var zoomLevel = this.map.getZoom();
+    var smesGMap = this;
+    var zoomLevel = smesGMap.map.getZoom();
 
     //If zoom level has changed, depending on old and new zoom levels marks need to be shown or hidden
-    if (!self.zoomLevel || self.zoomLevel !== zoomLevel) {
+    if (!smesGMap.zoomLevel || smesGMap.zoomLevel !== zoomLevel) {
 
-        if (zoomLevel < 14 && (!self.zoomLevel || self.zoomLevel >= 14)) {
-            self.hideMarkers();
-            self.markersHidden = true;
-        } else if (zoomLevel >= 14 && (!self.zoomLevel || self.zoomLevel < 14)) {
-            self.showMarkers();
+        if (zoomLevel < 14 && (!smesGMap.zoomLevel || smesGMap.zoomLevel >= 14)) {
+            smesGMap.hideMarkers();
+            smesGMap.markersHidden = true;
+        } else if (zoomLevel >= 14 && (!smesGMap.zoomLevel || smesGMap.zoomLevel < 14)) {
+            smesGMap.showMarkers();
         }
 
         if (zoomLevel >= 14) {
-            self.markerResizeRequired = true;
-            self.markersHidden = false;
+            smesGMap.markerResizeRequired = true;
+            smesGMap.markersHidden = false;
         }
 
     }
 
     //Reset zoomLevel
-    self.zoomLevel = self.map.getZoom();
-    self.markerSize = 9 + ((self.zoomLevel - 14) * 1.75);
+    smesGMap.zoomLevel = smesGMap.map.getZoom();
+    smesGMap.markerSize = 9 + ((smesGMap.zoomLevel - 14) * 1.75);
 
 };
 
@@ -1018,15 +1037,15 @@ SMESGMap.prototype.resizeIcons = function () {
     "use strict";
 
     var icon, newSize;
-    var self = this;
+    var smesGMap = this;
 
     //Loop through the markers and re-szie their icons
-    for (var markerCounter = 0; markerCounter < self.markers.length || 0; markerCounter++) {
+    for (var markerCounter = 0; markerCounter < smesGMap.markers.length || 0; markerCounter++) {
         //Retrieve the marker icon and re-set its size
-        icon = self.markers[markerCounter].icon;
-        newSize = self.markerSize || 14;
+        icon = smesGMap.markers[markerCounter].icon;
+        newSize = smesGMap.markerSize || 14;
 
-        if (self.markers[markerCounter].isSelected) {
+        if (smesGMap.markers[markerCounter].isSelected) {
             newSize = newSize * 2;
         }
 
@@ -1034,7 +1053,7 @@ SMESGMap.prototype.resizeIcons = function () {
         icon.size = new google.maps.Size(newSize, newSize);
 
         //Update icon
-        self.markers[markerCounter].setIcon(icon);
+        smesGMap.markers[markerCounter].setIcon(icon);
     }
 
 };
@@ -1045,10 +1064,10 @@ SMESGMap.prototype.resizeIcons = function () {
 SMESGMap.prototype.hideMarkers = function () {
     "use strict";
 
-    var self = this;
+    var smesGMap = this;
 
-    for (var i = 0; i < self.markers.length; i++) {
-        self.markers[i].setMap(null);
+    for (var i = 0; i < smesGMap.markers.length; i++) {
+        smesGMap.markers[i].setMap(null);
     }
 
 };
@@ -1056,10 +1075,10 @@ SMESGMap.prototype.hideMarkers = function () {
 SMESGMap.prototype.showMarkers = function () {
     "use strict";
 
-    var self = this;
+    var smesGMap = this;
 
-    for (var i = 0; i < self.markers.length; i++) {
-        self.markers[i].setMap(self.map);
+    for (var i = 0; i < smesGMap.markers.length; i++) {
+        smesGMap.markers[i].setMap(smesGMap.map);
     }
 
 };
@@ -1068,10 +1087,10 @@ SMESGMap.prototype.showMarkers = function () {
 SMESGMap.prototype.hideLabels = function () {
     "use strict";
 
-    var self = this;
+    var smesGMap = this;
 
-    for (var i = 0; i < self.labels.length; i++) {
-        self.labels[i].set('map', 'null');
+    for (var i = 0; i < smesGMap.labels.length; i++) {
+        smesGMap.labels[i].set('map', 'null');
     }
 
 
@@ -1080,10 +1099,10 @@ SMESGMap.prototype.hideLabels = function () {
 SMESGMap.prototype.showLabels = function () {
     "use strict";
 
-    var self = this;
+    var smesGMap = this;
 
-    for (var i = 0; i < self.labels.length; i++) {
-        self.labels[i].set('map', self.map);
+    for (var i = 0; i < smesGMap.labels.length; i++) {
+        smesGMap.labels[i].set('map', smesGMap.map);
     }
 
 };
@@ -1093,7 +1112,7 @@ SMESGMap.prototype.showLabels = function () {
 SMESGMap.prototype.reverseGeocode = function (cLat, cLng) {
     "use strict";
 
-    var self = this;
+    var smesGMap = this;
 
     return new Promise(function (resolve, reject) {
 
@@ -1102,7 +1121,7 @@ SMESGMap.prototype.reverseGeocode = function (cLat, cLng) {
             lng: cLng
         };
 
-        self.geocoder.geocode({
+        smesGMap.geocoder.geocode({
             'location': latLng
         }, function (results, status) {
 
@@ -1130,18 +1149,18 @@ SMESGMap.prototype.reverseGeocode = function (cLat, cLng) {
 SMESGMap.prototype.setUpAutoComplete = function (elementId, clearButtonId) {
     "use strict";
 
-    var self = this;
+    var smesGMap = this;
     var input = document.getElementById(elementId);
     var searchInfoWindow = new google.maps.InfoWindow();
     var clearButton = document.getElementById(clearButtonId);
 
     var searchMarker = new google.maps.Marker({
-        map: self.map,
+        map: smesGMap.map,
         anchorPoint: new google.maps.Point(0, -29)
     });
 
-    self.autoComplete = new google.maps.places.Autocomplete(input);
-    self.autoComplete.bindTo('bounds', self.map);
+    smesGMap.autoComplete = new google.maps.places.Autocomplete(input);
+    smesGMap.autoComplete.bindTo('bounds', smesGMap.map);
 
     input.addEventListener('input', function () {
         input.classList.remove("not-found");
@@ -1154,10 +1173,10 @@ SMESGMap.prototype.setUpAutoComplete = function (elementId, clearButtonId) {
     });
 
 
-    self.autoComplete.addListener('place_changed', function () {
+    smesGMap.autoComplete.addListener('place_changed', function () {
         searchInfoWindow.close();
         searchMarker.setVisible(false);
-        var place = self.autoComplete.getPlace();
+        var place = smesGMap.autoComplete.getPlace();
 
         if (!place.geometry) {
             input.classList.add("not-found");
@@ -1168,10 +1187,10 @@ SMESGMap.prototype.setUpAutoComplete = function (elementId, clearButtonId) {
 
         // If the place has a geometry, then present it on a map.
         if (place.geometry.viewport) {
-            self.map.fitBounds(place.geometry.viewport);
+            smesGMap.map.fitBounds(place.geometry.viewport);
         } else {
-            self.map.setCenter(place.geometry.location);
-            self.map.setZoom(17); // Why 17? Because it will likely be close enough to load marks.
+            smesGMap.map.setCenter(place.geometry.location);
+            smesGMap.map.setZoom(17); // Why 17? Because it will likely be close enough to load marks.
         }
 
         //Add map icon
@@ -1196,12 +1215,12 @@ SMESGMap.prototype.setUpAutoComplete = function (elementId, clearButtonId) {
         }
 
         searchInfoWindow.setContent('<div><strong>' + place.name + '</strong><br>' + address + '</div>');
-        searchInfoWindow.open(self.map, searchMarker);
+        searchInfoWindow.open(smesGMap.map, searchMarker);
 
     });
 
     searchMarker.addListener('click', function () {
-        searchInfoWindow.open(self.map, searchMarker);
+        searchInfoWindow.open(smesGMap.map, searchMarker);
     });
 
 };
@@ -1211,16 +1230,16 @@ SMESGMap.prototype.setUpAutoComplete = function (elementId, clearButtonId) {
 SMESGMap.prototype.checkSizeofMap = function () {
     "use strict";
 
-    var mapBoundsSouthWest = this.map.getBounds().getSouthWest();
-    var mapCenter = this.map.getCenter();
-    var self = this;
+    var mapBoundsSouthWest = smesGMap.map.getBounds().getSouthWest();
+    var mapCenter = smesGMap.map.getCenter();
+    var smesGMap = this;
 
     if (typeof mapBoundsSouthWest !== 'undefined' && typeof mapCenter !== 'undefined') {
-        var mapRadius = self.getDistanceKms(mapCenter.lat(), mapCenter.lng(), mapBoundsSouthWest.lat(), mapBoundsSouthWest.lng());
+        var mapRadius = smesGMap.getDistanceKms(mapCenter.lat(), mapCenter.lng(), mapBoundsSouthWest.lat(), mapBoundsSouthWest.lng());
 
-        self.mapSize = (mapRadius / 1000);
+        smesGMap.mapSize = (mapRadius / 1000);
     } else {
-        self.mapSize = 0;
+        smesGMap.mapSize = 0;
     }
 
 
@@ -1233,12 +1252,12 @@ SMESGMap.prototype.checkSizeofMap = function () {
 SMESGMap.prototype.getDistanceKms = function (point1Lat, point1Lng, point2Lat, point2Lng) {
     "use strict";
 
-    var self = this;
+    var smesGMap = this;
     var R = 6378137; // Earth’s mean radius
-    var dLat = self.calcRad(point2Lat - point1Lat);
-    var dLong = self.calcRad(point2Lng - point1Lng);
+    var dLat = smesGMap.calcRad(point2Lat - point1Lat);
+    var dLong = smesGMap.calcRad(point2Lng - point1Lng);
     var a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-        Math.cos(self.calcRad(point1Lat)) * Math.cos(self.calcRad(point2Lat)) *
+        Math.cos(smesGMap.calcRad(point1Lat)) * Math.cos(smesGMap.calcRad(point2Lat)) *
         Math.sin(dLong / 2) * Math.sin(dLong / 2);
     var c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     var d = R * c;
@@ -1259,20 +1278,20 @@ SMESGMap.prototype.calcRad = function (x) {
 SMESGMap.prototype.changeMapStyle = function (styleName) {
     "use strict";
 
-    var self = this;
+    var smesGMap = this;
     var styleDetails;
 
-    self.mapStyleName = styleName;
+    smesGMap.mapStyleName = styleName;
 
-    if (styleName !== "google" && self.mapStyles[styleName]) {
-        styleDetails = self.mapStyles[styleName];
+    if (styleName !== "google" && smesGMap.mapStyles[styleName]) {
+        styleDetails = smesGMap.mapStyles[styleName];
     }
 
-    self.map.setOptions({
+    smesGMap.map.setOptions({
         styles: styleDetails
     });
 
-    self.saveStylePreference(styleName);
+    smesGMap.saveStylePreference(styleName);
 };
 
 /**
@@ -1281,7 +1300,9 @@ SMESGMap.prototype.changeMapStyle = function (styleName) {
 SMESGMap.prototype.setupMapStyles = function () {
     "use strict";
 
-    this.mapStyles = {
+    var smesGMap = this;
+    
+    smesGMap.mapStyles = {
         coolgrey: [{
             "featureType": "landscape",
             "elementType": "labels",
