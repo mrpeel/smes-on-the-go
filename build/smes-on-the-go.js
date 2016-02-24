@@ -110,14 +110,14 @@ SMESMarkStore.prototype.saveMarksToStorage = function () {
     smesMarkStore.lastStorageTimeStamp = Date.now();
     storageTimeStamp = smesMarkStore.lastStorageTimeStamp;
 
-    //Set function to write storage after 5 minutes.
-    // if another write request comes in within 10 minutes, smesMarkStore.lastStorageTimeStamp variable will have changed and the write will be aborted.
+    //Set function to write storage after 1 minute.
+    // if another write request comes in within 1 minute, smesMarkStore.lastStorageTimeStamp variable will have changed and the write will be aborted.
     window.setTimeout(function () {
         if (storageTimeStamp === smesMarkStore.lastStorageTimeStamp) {
             smesMarkStore.executeSaveMarks();
 
         }
-    }, 600000);
+    }, 60000);
 
 };
 
