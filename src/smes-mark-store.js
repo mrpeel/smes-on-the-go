@@ -32,19 +32,6 @@ var SMESMarkStore = function (storeOptions) {
     }, false);
 };
 
-
-SMESMarkStore.prototype.localStorageAvailable = function () {
-    "use strict";
-
-    return idb.open('smes-db', 1, function (upgradeDb) {
-        var store = upgradeDb.createObjectStore('smes-marks', {
-            keyPath: 'nineFigureNumber'
-        });
-        store.createIndex('last-update', 'lastUpdated');
-    });
-
-};
-
 SMESMarkStore.prototype.retrieveStoredMarks = function () {
     "use strict";
 
@@ -67,7 +54,6 @@ SMESMarkStore.prototype.retrieveStoredMarks = function () {
             }
 
         });
-
     }
 
     //If a callback was specified, call it now
