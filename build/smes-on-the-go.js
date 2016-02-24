@@ -230,6 +230,11 @@ SMESMarkStore.prototype.processRetrievedMarks = function (retrievedData) {
 
     var smesMarkStore = this;
 
+    //check if retrieved data has been returned as an array - function exoects an array
+    if (!Array.isArray(retrievedData)) {
+        retrievedData = [retrievedData];
+    }
+
     return new Promise(function (resolve, reject) {
 
         if (smesMarkStore.useLocalStore) {
