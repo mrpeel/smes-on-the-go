@@ -60,8 +60,8 @@ SMESMarkStore.prototype.retrieveStoredMarks = function () {
         var markKeys = Object.keys(smesMarkStore.markData);
 
         markKeys.forEach(function (nineFigureNumber) {
-            if (smesMarkStore.markData[nineFigureNumber] > comparisonMSec) {
-                smesMarkStore.loadMark.apply(smesMarkStore, [mark, "new"]);
+            if (smesMarkStore.markData[nineFigureNumber].lastUpdated > comparisonMSec) {
+                smesMarkStore.loadMark.apply(smesMarkStore, [smesMarkStore.markData[nineFigureNumber], "new"]);
             } else {
                 delete smesMarkStore.markData[nineFigureNumber];
             }
