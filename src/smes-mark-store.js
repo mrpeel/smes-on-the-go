@@ -1,53 +1,48 @@
 /*global Promise, setTimeout, window, document, console, navigator, self, MouseEvent, Blob, FileReader, module, atob, Uint8Array, define */
-/*global ReverseGeocoder, fetch */
+/*global ReverseGeocoder, fetch, idb, IDBKeyRange */
 
 
-var SMESMarkStore = function () {
+var SMESMarkStore = function (storeOptions) {
     "use strict";
 
     var smesMarkStore = this;
+    storeOptions = storeOptions || {};
 
-    smesMarkStore.useLocalStore = smesMarkStore.localStorageAvailable();
-    smesMarkStore.maxRequests = 15;
+    smesMarkStore.maxRequests = 12;
     smesMarkStore.perNumberOfSeconds = 60;
     smesMarkStore.lastStorageTimeStamp = Date.now();
     smesMarkStore.baseURL = 'https://maps.land.vic.gov.au/lvis/services/smesDataDelivery';
-    smesMarkStore.updateIndex = [];
-    smesMarkStore.newIndex = [];
     smesMarkStore.tooManyMarks = false;
+    smesMarkStore.cacheDays = storeOptions.cacheDays || 14;
+    smesMarkStore.msecPerDay = 1000 * 60 * 60 * 24;
+    smesMarkStore.markData = {};
 
-    if (smesMarkStore.useLocalStore) {
-        smesMarkStore.retrieveStoredMarks();
-    } else {
-        smesMarkStore.markData = {};
+
+    if (storeOptions.loadMark) {
+        smesMarkStore.loadMark = storeOptions.loadMark;
     }
 
+    if (storeOptions.finishedRetrieve) {
+        smesMarkStore.finishedRetrieve = storeOptions.finishedRetrieve;
+    }
 
-    //Add a before unload event to write marks to storage
     window.addEventListener("beforeunload", function (e) {
         // Do something
         smesMarkStore.executeSaveMarks();
     }, false);
-
-    //After current processing is finished, remove any marks older than 14 days
-    window.setTimeout(function () {
-        smesMarkStore.markData = smesMarkStore.removeOldMarks(14);
-    }, 0);
 };
 
 
 SMESMarkStore.prototype.localStorageAvailable = function () {
     "use strict";
 
-    try {
-        var storage = window.localStorage,
-            x = '__storage_test__';
-        storage.setItem(x, x);
-        storage.removeItem(x);
-        return true;
-    } catch (e) {
-        return false;
-    }
+    return idb.open('smes-db', 1, function (upgradeDb) {
+        var store = upgradeDb.createObjectStore('smes-marks', {
+            keyPath: 'nineFigureNumber'
+        });
+        store.createIndex('last-update', 'lastUpdated');
+    });
+
 };
 
 SMESMarkStore.prototype.retrieveStoredMarks = function () {
@@ -55,25 +50,30 @@ SMESMarkStore.prototype.retrieveStoredMarks = function () {
 
     var smesMarkStore = this;
     var storedData, mark;
+    var comparisonMSec = Date.now() - (smesMarkStore.cacheDays * smesMarkStore.msecPerDay) + 1;
 
-    if (!smesMarkStore.useLocalStore) {
-        return;
-    }
-
-    storedData = window.localStorage.getItem('smes-mark-data');
-
-    if (storedData) {
-        smesMarkStore.markData = JSON.parse(storedData);
-        //Add all marks to the new mark index - to ensure they will get loaded to the UI
-        for (mark in smesMarkStore.markData) {
-            smesMarkStore.newIndex.push(mark);
-        }
-
+    if (!window.localStorage) {
+        smesMarkStore.useLocalStore = false;
     } else {
-        smesMarkStore.markData = {};
+        smesMarkStore.useLocalStore = true;
+        smesMarkStore.markData = JSON.parse(window.localStorage.getItem('smes-mark-data') || "");
+        var markKeys = Object.keys(smesMarkStore.markData);
+
+        markKeys.forEach(function (nineFigureNumber) {
+            if (smesMarkStore.markData[nineFigureNumber] > comparisonMSec) {
+                smesMarkStore.loadMark.apply(smesMarkStore, [mark, "new"]);
+            } else {
+                delete smesMarkStore.markData[nineFigureNumber];
+            }
+
+        });
+
     }
 
-
+    //If a callback was specified, call it now
+    if (smesMarkStore.finishedRetrieve) {
+        smesMarkStore.finishedRetrieve.apply(smesMarkStore);
+    }
 
 
 };
@@ -85,9 +85,13 @@ SMESMarkStore.prototype.clearStoredMarks = function () {
 
     if (!smesMarkStore.useLocalStore) {
         return;
+    } else {
+        try {
+            window.localStorage.removeItem('smes-mark-data');
+        } catch (err) {
+            console.log(err);
+        }
     }
-
-    window.localStorage.removeItem('smes-mark-data');
 
 };
 
@@ -107,13 +111,13 @@ SMESMarkStore.prototype.saveMarksToStorage = function () {
     storageTimeStamp = smesMarkStore.lastStorageTimeStamp;
 
     //Set function to write storage after 5 minutes.
-    // if another write request comes in within 5 minutes, smesMarkStore.lastStorageTimeStamp variable will have changed and the write will be aborted.
+    // if another write request comes in within 10 minutes, smesMarkStore.lastStorageTimeStamp variable will have changed and the write will be aborted.
     window.setTimeout(function () {
         if (storageTimeStamp === smesMarkStore.lastStorageTimeStamp) {
             smesMarkStore.executeSaveMarks();
 
         }
-    }, 300000);
+    }, 600000);
 
 };
 
@@ -129,13 +133,13 @@ SMESMarkStore.prototype.executeSaveMarks = function () {
     } catch (e) {
         try {
             //Check total size - if >= 5MB then start culling - attempt to only store marks retrieved within the last 7 days
-            if (JSON.stringify(culledMarkData).length > 5000000) {
+            if (JSON.stringify(smesMarkStore.markData).length > 5000000) {
                 culledMarkData = smesMarkStore.removeOldMarks(7);
             }
 
             //Check total size - if still >= 5MB then start culling - attempt to only store marks retrieved in the last day
             if (JSON.stringify(culledMarkData).length > 5000000) {
-                culledMarkData = smesMarkStore.removeOldMarks(7);
+                culledMarkData = smesMarkStore.removeOldMarks(14);
             }
 
             window.localStorage.setItem('smes-mark-data', JSON.stringify(culledMarkData));
@@ -151,39 +155,17 @@ SMESMarkStore.prototype.removeOldMarks = function (numberOfDays) {
 
     var smesMarkStore = this;
     var individualMark;
-    var comparisonDate;
+    var comparisonMSec = Date.now() - (numberOfDays * smesMarkStore.msecPerDay) + 1;
     var newMarkData = smesMarkStore.markData;
 
-    for (individualMark in newMarkData) {
-        if (smesMarkStore.isNumberOfDaysOld(newMarkData[individualMark].lastUpdated, numberOfDays)) {
-            delete newMarkData[individualMark];
+    newMarkData.forEach(function (mark) {
+        if (mark.lastUpdated < comparisonMSec) {
+            delete newMarkData[mark.nineFigureNumber];
         }
-    }
+
+    });
 
     return newMarkData;
-};
-
-SMESMarkStore.prototype.isNumberOfDaysOld = function (dateValue, number) {
-    "use strict";
-
-    var comparisonDate = new Date(dateValue);
-    var todaysDate = new Date();
-    var msecPerDay = 1000 * 60 * 60 * 24;
-
-    // Get the difference in milliseconds.
-    var interval = todaysDate.getTime() - comparisonDate.getTime();
-
-    // Calculate how many days the interval contains. Subtract that
-    // many days from the interval to determine the remainder.
-    var days = Math.floor(interval / msecPerDay);
-
-    if (days >= number) {
-        return true;
-    } else {
-        return false;
-    }
-
-
 };
 
 SMESMarkStore.prototype.delayNextRequest = function () {
@@ -196,7 +178,7 @@ SMESMarkStore.prototype.delayNextRequest = function () {
 
 };
 
-SMESMarkStore.prototype.requestMarkInformation = function (cLat, cLong, cRadius, callback, tooManyCallback) {
+SMESMarkStore.prototype.requestMarkInformation = function (requestOptions) {
     "use strict";
 
     var smesMarkStore = this;
@@ -205,7 +187,7 @@ SMESMarkStore.prototype.requestMarkInformation = function (cLat, cLong, cRadius,
     var executionDelay = 500;
 
     //If an unacceptable radius has been supplied, don't call the service
-    if (cRadius > 2) {
+    if (requestOptions.cRadius > 2) {
         return;
     }
 
@@ -231,20 +213,20 @@ SMESMarkStore.prototype.requestMarkInformation = function (cLat, cLong, cRadius,
         if (currentRequestTimeStamp === smesMarkStore.lastQueuedTimeStamp) {
             console.log("Processing request");
             smesMarkStore.lastSuccesfullRetrieve = new Date();
-            smesMarkStore.retrieveMarkInformation(cLat, cLong, cRadius).then(function (marksRetrieved) {
+            smesMarkStore.retrieveMarkInformation(requestOptions.cLat, requestOptions.cLong, requestOptions.cRadius).then(function (marksRetrieved) {
                 //Check data element is present, if so process it, and run the callback function
                 if (marksRetrieved) {
                     smesMarkStore.processRetrievedMarks(marksRetrieved).then(function () {
                         console.log("Executing callback");
                         smesMarkStore.tooManyMarks = false;
-                        callback.apply(this);
+                        requestOptions.finishedCallback.apply(smesMarkStore);
                     });
 
                 }
             }).catch(function (err) {
                 if (err === "Too many marks") {
                     smesMarkStore.tooManyMarks = true;
-                    tooManyCallback.apply(this);
+                    requestOptions.tooManyCallback.apply(smesMarkStore);
                 }
                 console.log(err);
             });
@@ -261,104 +243,89 @@ SMESMarkStore.prototype.processRetrievedMarks = function (retrievedData) {
     "use strict";
 
     var smesMarkStore = this;
-    var dataObject, objectProp;
 
     return new Promise(function (resolve, reject) {
 
+        if (smesMarkStore.useLocalStore) {
+            var tStamp = new Date();
 
-        //reset indexes of new and updates marks
-        smesMarkStore.updateIndex = [];
-        smesMarkStore.newIndex = [];
+            retrievedData.forEach(function (markData) {
+                var matches;
+                var loadType = "new";
 
-        //console.log("Mark count: " + smesMarkStore.countMarks());
+                if (smesMarkStore.markData[markData.nineFigureNumber]) {
+                    //Already have the mark - check if it's changed
+                    var markKeys = Object.keys(markData);
+                    loadType = "update";
+                    matches = true;
 
-        for (var i = 0; i < retrievedData.length; i++) {
-            dataObject = retrievedData[i];
-
-            //Check whether this mark is already in the store
-            if (!smesMarkStore.markData[dataObject.nineFigureNumber]) {
-                //Don't have mark, so add it
-                smesMarkStore.addUpdateValueInStore(dataObject);
-                smesMarkStore.newIndex.push(dataObject.nineFigureNumber);
-
-            } else {
-                //Already have this mark - Check whether the mark was last retrieved within a day
-                if (smesMarkStore.isNumberOfDaysOld(smesMarkStore.markData[dataObject.nineFigureNumber].lastUpdated || 0, 1)) {
-                    //Check whether mark information has changed
-                    if (JSON.stringify(dataObject) !== JSON.stringify(smesMarkStore.markData[dataObject.nineFigureNumber].data)) {
-                        //data has changed so store data, store hash, remove address, and update lastUpdated
-                        smesMarkStore.addUpdateValueInStore(dataObject);
-                        smesMarkStore.updateIndex.push(dataObject.nineFigureNumber);
-                    } else {
-                        //Latest data is the same so change the lastUpdated value to now
-                        smesMarkStore.markData[dataObject.nineFigureNumber].lastUpdated = Date.now();
+                    for (var k = 0; k < markKeys.length; k++) {
+                        //Work throught the returned data keys and compare the record to the db
+                        if (markData[markKeys[k]] !== smesMarkStore.markData[markData.nineFigureNumber][markKeys[k]]) {
+                            matches = false;
+                            break;
+                        }
                     }
                 }
 
-            }
+                if (matches) {
+                    //Mark matches what we already have, so re-set last updated and move on
+                    smesMarkStore.markData[markData.nineFigureNumber].lastUpdated = Date.now();
 
+                } else {
+                    //Don't have this mark, so add it and call the loading function
+                    markData.lastUpdated = Date.now();
+                    smesMarkStore.markData[markData.nineFigureNumber] = markData;
+                    smesMarkStore.loadMark.apply(smesMarkStore, [markData, loadType]);
+                }
+            });
+
+            //Trigger process to save marks into browser storage
+            smesMarkStore.saveMarksToStorage();
+
+
+            resolve(true);
+
+        } else {
+            //Not using record store, so just load it directly as a new mark
+            retrievedData.forEach(function (markData) {
+                smesMarkStore.loadMark.apply(smesMarkStore, [markData, "new"]);
+            });
+
+            resolve(true);
         }
 
-        resolve(true);
-
-        //console.log("Mark count: " + smesMarkStore.countMarks());
-
-        //Trigger process to save marks into browser storage
-        smesMarkStore.saveMarksToStorage();
 
     });
-
-
 };
 
-
-SMESMarkStore.prototype.countMarks = function () {
-    "use strict";
-
-    var smesMarkStore = this;
-    var objectProp;
-    var markCounter = 0;
-
-
-    //Simple concatenation of the properties of the object - up to 24 vals
-    for (objectProp in smesMarkStore.markData) {
-        markCounter += 1;
-    }
-
-    return markCounter;
-};
-
-SMESMarkStore.prototype.addUpdateValueInStore = function (dataObject) {
-    "use strict";
-
-    var smesMarkStore = this;
-
-    if (!smesMarkStore.markData[dataObject.nineFigureNumber]) {
-        smesMarkStore.markData[dataObject.nineFigureNumber] = {};
-    }
-
-    smesMarkStore.markData[dataObject.nineFigureNumber].data = dataObject;
-    delete smesMarkStore.markData[dataObject.nineFigureNumber].address;
-    smesMarkStore.markData[dataObject.nineFigureNumber].lastUpdated = Date.now();
-
-};
 
 SMESMarkStore.prototype.setAddress = function (nineFigureNumber, address) {
     "use strict";
 
     var smesMarkStore = this;
 
-    smesMarkStore.markData[nineFigureNumber].address = address;
-
+    if (smesMarkStore.useLocalStore) {
+        if (smesMarkStore.markData[nineFigureNumber]) {
+            smesMarkStore.markData[nineFigureNumber].address = address;
+        }
+    }
 };
 
 SMESMarkStore.prototype.returnAddress = function (nineFigureNumber) {
     "use strict";
 
     var smesMarkStore = this;
+    var address = "";
 
-    var surveyMark = smesMarkStore.markData[nineFigureNumber] || null;
-    return surveyMark.address || "";
+    if (smesMarkStore.useLocalStore) {
+        if (smesMarkStore.markData[nineFigureNumber]) {
+            address = smesMarkStore.markData[nineFigureNumber].address || "";
+        }
+    }
+
+    return address;
+
 
 };
 
@@ -375,13 +342,6 @@ SMESMarkStore.prototype.retrieveMarkInformation = function (cLat, cLong, cRadius
 
     return new Promise(function (resolve, reject) {
 
-        /*xr.get(smesMarkStore.baseURL + '/getMarkInformation', {
-                searchType: "Location",
-                latitude: cLat,
-                longitude: cLong,
-                radius: cRadius,
-                format: "Full"
-            })*/
         fetch(smesMarkStore.baseURL + "/getMarkInformation?searchType=Location&latitude=" + cLat + "&longitude=" + cLong + "&radius=" + cRadius + "&format=Full", {
                 mode: 'cors'
             }).then(function (response) {
@@ -418,7 +378,7 @@ SMESMarkStore.prototype.retrieveMarkInformation = function (cLat, cLong, cRadius
                 smesMarkStore.delayNextRequest();
                 console.log("Too many requests");
                 //}
-                return Promise.reject(err);
+                reject(err);
             });
     });
 

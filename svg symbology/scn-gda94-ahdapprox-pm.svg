@@ -1,0 +1,80 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<!-- Created with Inkscape (http://www.inkscape.org/) -->
+
+<svg
+   xmlns:dc="http://purl.org/dc/elements/1.1/"
+   xmlns:cc="http://creativecommons.org/ns#"
+   xmlns:rdf="http://www.w3.org/1999/02/22-rdf-syntax-ns#"
+   xmlns:svg="http://www.w3.org/2000/svg"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   id="svg4691"
+   height="128"
+   width="128"
+   version="1.1"
+   viewBox="0 0 128 128"
+   inkscape:version="0.91 r13725"
+   sodipodi:docname="scn-gda94-ahdapprox-pm.svg"
+   inkscape:export-filename="/Users/neilkloot/Dev/map-label/symbology/scn-gda94-ahdapprox-pm.png"
+   inkscape:export-xdpi="31.639999"
+   inkscape:export-ydpi="31.639999">
+  <defs
+     id="defs10" />
+  <sodipodi:namedview
+     pagecolor="#ffffff"
+     bordercolor="#666666"
+     borderopacity="1"
+     objecttolerance="10"
+     gridtolerance="10"
+     guidetolerance="10"
+     inkscape:pageopacity="0"
+     inkscape:pageshadow="2"
+     inkscape:window-width="697"
+     inkscape:window-height="480"
+     id="namedview8"
+     showgrid="false"
+     inkscape:zoom="1.84375"
+     inkscape:cx="64"
+     inkscape:cy="64"
+     inkscape:window-x="64"
+     inkscape:window-y="43"
+     inkscape:window-maximized="0"
+     inkscape:current-layer="svg4691" />
+  <metadata
+     id="metadata4696">
+    <rdf:RDF>
+      <cc:Work
+         rdf:about="">
+        <dc:format>image/svg+xml</dc:format>
+        <dc:type
+           rdf:resource="http://purl.org/dc/dcmitype/StillImage" />
+        <dc:title />
+      </cc:Work>
+    </rdf:RDF>
+  </metadata>
+  <g
+     id="layer1"
+     transform="translate(0 -924.36)">
+    <rect
+       id="rect4136"
+       height="110.54"
+       width="107.77"
+       stroke="#ae0ba5"
+       y="933.69"
+       x="10.794"
+       stroke-width="11.463"
+       fill="none" />
+  </g>
+  <g
+     id="layer2"
+     transform="translate(0 -924.36)">
+    <path
+       id="path5244"
+       fill="none"
+       transform="matrix(-.13030 -.16539 .14913 -.14132 31.861 1118.3)"
+       stroke="#1044e1"
+       stroke-width="62.321"
+       d="m345.71 229.51 77.06 212.65 77.07 212.65-222.7-39.59-222.69-39.59 145.63-173.06z" />
+  </g>
+</svg>

@@ -9,16 +9,26 @@
 var SMESGMap = function (elementId, options) {
     "use strict";
 
-    var melbourneCenter = new google.maps.LatLng(-37.813942, 144.9711861);
     var smesGMap = this;
+    var mapState = this.getMapState() || {};
+    var mapCenter;
+
+    if (mapState.lat && mapState.lng) {
+        mapCenter = new google.maps.LatLng(mapState.lat, mapState.lng);
+    } else {
+        //default to centre of melbourne if nothing saved
+        mapCenter = new google.maps.LatLng(-37.813942, 144.9711861);
+    }
+
 
     smesGMap.setupMapStyles();
+    smesGMap.mapStyleName = mapState.mapStyleName || "iovation";
 
     options = options || {};
 
     options.mapOptions = options.mapOptions || {
-        center: melbourneCenter,
-        zoom: 15,
+        center: mapCenter,
+        zoom: mapState.zoom || 15,
         mapTypeId: google.maps.MapTypeId.ROADMAP,
 
         mapTypeControl: false,
@@ -33,7 +43,7 @@ var SMESGMap = function (elementId, options) {
         },
         panControl: false,
         rotateControl: false,
-        styles: smesGMap.mapStyles.iovation
+        styles: this.mapStyles[this.mapStyleName]
     };
 
     smesGMap.mapOptions = options.mapOptions;
@@ -43,6 +53,7 @@ var SMESGMap = function (elementId, options) {
     smesGMap.currentZoom = 1;
     smesGMap.markerIcons = [];
     smesGMap.markerSize = 10;
+    smesGMap.pixelDensity = 1;
     smesGMap.markersHidden = false;
 
     smesGMap.map = new google.maps.Map(document.getElementById(elementId), smesGMap.mapOptions);
@@ -62,8 +73,6 @@ var SMESGMap = function (elementId, options) {
         closeBoxURL: "",
         infoBoxClearance: new google.maps.Size(4, 4)
     });
-
-    smesGMap.getMapPreference();
 
 
     google.maps.event.addListener(smesGMap.map, 'zoom_changed', function () {
@@ -87,6 +96,7 @@ var SMESGMap = function (elementId, options) {
 
     google.maps.event.addListener(smesGMap.map, 'idle', function () {
         smesGMap.resizeIcons();
+        smesGMap.saveMapState();
     });
 
 
@@ -123,7 +133,7 @@ var SMESGMap = function (elementId, options) {
 
 
     //Attempt oto move map to current user coordinates
-    smesGMap.geoLocate();
+    //smesGMap.geoLocate();
     //Make sure infobox is correct size
     smesGMap.resizeInfoBox();
 
@@ -153,54 +163,42 @@ SMESGMap.prototype.resizeInfoBox = function () {
 
 };
 
-SMESGMap.prototype.localStorageAvailable = function () {
-    "use strict";
-
-    try {
-        var storage = window.localStorage,
-            x = '__storage_test__';
-        storage.setItem(x, x);
-        storage.removeItem(x);
-        return true;
-    } catch (e) {
-        return false;
-    }
-};
-
-SMESGMap.prototype.getMapPreference = function () {
+SMESGMap.prototype.getMapState = function () {
     "use strict";
 
     var smesGMap = this;
-    var storedData;
+    var mapState = {};
 
 
-    if (!smesGMap.localStorageAvailable) {
-        return;
+    if (!window.localStorage) {
+        return mapState;
     }
 
-    storedData = window.localStorage.getItem('map-style');
+    mapState = JSON.parse(window.localStorage.getItem('map-state')) || {};
 
-    if (storedData) {
-        smesGMap.changeMapStyle(storedData);
-        smesGMap.mapStyleName = storedData;
-    }
-
+    return mapState;
 
 };
 
-
-SMESGMap.prototype.saveStylePreference = function (stlyeName) {
+SMESGMap.prototype.saveMapState = function () {
     "use strict";
 
     var smesGMap = this;
+    var mapState = {};
+    var mapCoords = smesGMap.getMapPosition();
 
-    if (!smesGMap.localStorageAvailable) {
+    mapState.zoom = smesGMap.getZoom();
+    mapState.mapStyleName = smesGMap.mapStyleName;
+    mapState.lat = mapCoords.lat;
+    mapState.lng = mapCoords.lng;
+
+    if (!window.localStorage) {
         return;
     }
 
 
     try {
-        window.localStorage.setItem('map-style', stlyeName);
+        window.localStorage.setItem('map-state', JSON.stringify(mapState));
     } catch (e) {
         //Give up
         console.log("Write to local storage failed");
@@ -225,6 +223,18 @@ SMESGMap.prototype.geoLocate = function () {
 
 };
 
+SMESGMap.prototype.getMapPosition = function () {
+    "use strict";
+
+    var smesGMap = this;
+    var mapCenter = smesGMap.map.getCenter();
+    var position = {};
+
+    position.lat = mapCenter.lat();
+    position.lng = mapCenter.lng();
+
+    return position;
+};
 
 
 SMESGMap.prototype.getZoom = function () {
@@ -259,8 +269,8 @@ SMESGMap.prototype.addMarker = function (marker) {
 
 
     var icon = {
-        url: markerIcon + ".svg",
-        size: new google.maps.Size(smesGMap.markerSize, smesGMap.markerSize),
+        url: markerIcon + ".png",
+        size: new google.maps.Size(smesGMap.markerSize * smesGMap.pixelDensity, smesGMap.markerSize * smesGMap.pixelDensity),
         scaledSize: new google.maps.Size(smesGMap.markerSize, smesGMap.markerSize)
     };
 
@@ -341,8 +351,8 @@ SMESGMap.prototype.updateMarker = function (marker) {
     //If a marker was found and defined continue processing
     if (mapMarker) {
         icon = {
-            url: markerIcon + ".svg",
-            size: new google.maps.Size(smesGMap.markerSize, smesGMap.markerSize),
+            url: markerIcon + ".png",
+            size: new google.maps.Size(smesGMap.markerSize * smesGMap.pixelDensity, smesGMap.markerSize * smesGMap.pixelDensity),
             scaledSize: new google.maps.Size(smesGMap.markerSize, smesGMap.markerSize)
         };
 
@@ -380,9 +390,10 @@ SMESGMap.prototype.setSelectedMarker = function (marker) {
 
     newSize = smesGMap.markerSize * 2;
     icon.scaledSize = new google.maps.Size(newSize, newSize);
-    icon.size = new google.maps.Size(newSize, newSize);
+    icon.size = new google.maps.Size(newSize * smesGMap.pixelDensity, newSize * smesGMap.pixelDensity);
     icon.url = url;
 
+    marker.zIndex = 100;
     marker.setIcon(icon);
     marker.isSelected = true;
 };
@@ -404,7 +415,7 @@ SMESGMap.prototype.resetSelectedMarker = function () {
             url = url.replace("selected-", "");
 
             icon.scaledSize = new google.maps.Size(smesGMap.markerSize, smesGMap.markerSize);
-            icon.size = new google.maps.Size(smesGMap.markerSize, smesGMap.markerSize);
+            icon.size = new google.maps.Size(smesGMap.markerSize * smesGMap.pixelDensity, smesGMap.markerSize * smesGMap.pixelDensity);
             icon.url = url;
 
             smesGMap.markers[i].setIcon(icon);
@@ -517,7 +528,7 @@ SMESGMap.prototype.resizeIcons = function () {
         }
 
         icon.scaledSize = new google.maps.Size(newSize, newSize);
-        icon.size = new google.maps.Size(newSize, newSize);
+        icon.size = new google.maps.Size(newSize * smesGMap.pixelDensity, newSize * smesGMap.pixelDensity);
 
         //Update icon
         smesGMap.markers[markerCounter].setIcon(icon);
@@ -759,7 +770,6 @@ SMESGMap.prototype.changeMapStyle = function (styleName) {
         styles: styleDetails
     });
 
-    smesGMap.saveStylePreference(styleName);
 };
 
 /**

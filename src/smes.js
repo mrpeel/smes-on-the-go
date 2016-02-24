@@ -2,6 +2,7 @@
 
 
 //Variables for display
+var startingUp;
 var loader;
 var connectionIndicator, connectIcon, connectToolTip;
 var locateButton;
@@ -19,9 +20,17 @@ var pcmSearchText = "PCM";
 var currentNineFigureNumber;
 var currentLatLng = {};
 var currentRadius;
+//Set-up the min / max lat /  lng for Vic  -no point in sending a request outside of these coords
+var vicExtents = {};
+vicExtents.minLat = -39.56912880425731;
+vicExtents.maxLat = -33.43769367843318;
+vicExtents.minLng = 140.64925642150877;
+vicExtents.maxLng = 152.03658552307127;
 
 
 window.addEventListener('load', function (e) {
+    //Set variable to bypass initial load when map is getting set
+    startingUp = true;
 
     loader = document.getElementById("loader");
     connectionIndicator = document.getElementById("connection-indicator");
@@ -37,13 +46,22 @@ window.addEventListener('load', function (e) {
 
     overlayEl = document.getElementById("screen-overlay");
 
+
     setupMap();
 
-    //Allow oppporunity for geolocation to complete prior to loading marks
+    var markStoreOptions = {};
+    markStoreOptions.loadMark = loadMark;
+    markStoreOptions.finishedRetrieve = requestMarkInformation;
+
+
+    markStore = new SMESMarkStore(markStoreOptions);
+
+
+    //Wait one second before starting mark loading process
     window.setTimeout(function () {
-        loadMarks();
-        displayZoomMessage();
-    }, 50);
+        startingUp = false;
+        markStore.retrieveStoredMarks();
+    }, 1000);
 
     //When current processing is one, set-up map style click handlers
     window.setTimeout(function () {
@@ -61,7 +79,7 @@ window.addEventListener('load', function (e) {
 
             }
         }
-    }, 100);
+    }, 0);
 
 
 }, false);
@@ -121,8 +139,11 @@ function setupMap() {
         });
     }
 
+    //Set double pixel densi=ty for iOS
+    if (mobileOS.indexOf("iOS") === 0) {
+        smesMap.pixelDensity = 2;
+    }
 
-    markStore = new SMESMarkStore();
     smesMap.setUpAutoComplete("location-search", "clear-search-div");
 
 
@@ -141,17 +162,39 @@ function geoLocate() {
 
 function requestMarkInformation() {
 
-    var mapCenter, radius;
+    if (startingUp) {
+        return;
+    }
+
+    var mapCenter, radius, requestOptions;
 
     mapCenter = smesMap.map.getCenter();
     radius = smesMap.mapSize || 2;
+
+    //TO-DO check if map center is outside of victoria
 
     showLoader();
 
     console.log("requestMarkInformation");
 
-    markStore.requestMarkInformation(mapCenter.lat(), mapCenter.lng(), radius, loadMarks, displayZoomMessage);
-    //console.log(markStore.newIndex);
+
+    requestOptions = {};
+    requestOptions.cLat = mapCenter.lat();
+    requestOptions.cLong = mapCenter.lng();
+    requestOptions.cRadius = radius;
+    requestOptions.finishedCallback = displayZoomMessage;
+    requestOptions.tooManyCallback = displayZoomMessage;
+
+    //check that the coordinates are somewhere near Victoria before sending the request
+    if (requestOptions.cLat < vicExtents.minLat || requestOptions.cLat > vicExtents.maxLat ||
+        requestOptions.cLong < vicExtents.minLng || requestOptions.cLong < vicExtents.minLng) {
+        console.log("Outside of Vic");
+        hideLoader();
+        return;
+    }
+
+    markStore.requestMarkInformation(requestOptions);
+
 
 }
 
@@ -209,57 +252,50 @@ function displayZoomMessage() {
 
 }
 
-function loadMarks() {
+function loadMark(surveyMark, loadType) {
     //Work through the new markers and add to the map, then work through updated markers and update on the map
     var preparedMark;
 
-    console.log("loadMarks");
+    //console.log("loadMarks");
 
 
+    preparedMark = prepMarkForMap(surveyMark);
 
+    if (loadType === "new") {
+        smesMap.addMarker(preparedMark.marker);
+        smesMap.addLabel(preparedMark.label);
 
-    //Add new marks
-    for (var n = 0; n < markStore.newIndex.length; n++) {
+    } else {
 
+        smesMap.updateMarker(preparedMark.marker);
+        smesMap.updateLabel(preparedMark.label);
 
-        preparedMark = prepMarkForMap(markStore.markData[markStore.newIndex[n]].data, markStore.markData[markStore.newIndex[n]].address || '');
 
         smesMap.addMarker(preparedMark.marker);
         smesMap.addLabel(preparedMark.label);
 
     }
 
-    //Update marks
-    for (var u = 0; u < markStore.updateIndex.length; u++) {
-
-
-        preparedMark = prepMarkForMap(markStore.markData[markStore.updateIndex[u]].data, markStore.markData[markStore.updateIndex[u]].address || '');
-
-
-
-        smesMap.updateMarker(preparedMark.marker);
-        smesMap.updateLabel(preparedMark.label);
-
-    }
-
-    //Call the zoom level to show / hide marks and labels as required
-    smesMap.setZoomLevel();
-    displayZoomMessage();
 }
 
 /**Returns an object with the mark object and the mark label object
  **/
-function prepMarkForMap(surveyMark, address) {
+function prepMarkForMap(surveyMark) {
     var eventListeners = {};
     var marker = {};
     var label = {};
-    var navigateString;
+    var navigateString, cardDiv;
 
     var closeButton = '<button id="close-info-box" class="close-button mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--icon">' +
         '<i class="material-icons">close</i>' +
         '</button>';
 
-    var cardDiv = '<div class="mdl-card infobox mdl-shadow--3dp overflow-x-visible">';
+    if (mobileOS === "iOSSafari") {
+        cardDiv = '<div class="mdl-card infobox mobile-safari mdl-shadow--3dp overflow-x-visible">';
+    } else {
+        cardDiv = '<div class="mdl-card infobox mdl-shadow--3dp overflow-x-visible">';
+    }
+
     var contentSDiv = '<div class="card-content"><div class="card-left">';
     var contentMDiv = '</div><div class="card-value">';
     var contentEDiv = '</div></div>';
@@ -282,7 +318,7 @@ function prepMarkForMap(surveyMark, address) {
         '<div class="info-window-header">' +
         '<div class="section__circle-container">' +
         '<div class="section__circle-container__circle card-symbol"> ' +
-        '<img class="info-symbol" src="symbology/' + markType.iconName + '.svg">' +
+        '<img class="info-symbol" src="symbology/' + markType.iconName + '.png">' +
         '</div>' +
         '</div>' +
         '<div class="header-text">' +
@@ -539,8 +575,13 @@ function isMobile() {
 
     if (userAgent.match(/Android/i)) {
         return "Android";
-    } else if (userAgent.match(/iPhone/i) || userAgent.match(/iPad/i)) {
-        return "iOS";
+    } else if ((/(iPad|iPhone|iPod)/gi).test(userAgent)) {
+        if (!(/CriOS/).test(userAgent) && !(/FxiOS/).test(userAgent) && !(/OPiOS/).test(userAgent) && !(/mercury/).test(userAgent)) {
+            return "iOSSafari";
+        } else {
+            return "iOS";
+        }
+
     } else {
         return "";
     }

@@ -153,7 +153,7 @@ gulp.task('copylibfiles', ['disthtml'], function () {
 /* Copy symbology files to the build and dist directories.
  */
 gulp.task('copysymbology', ['copylibfiles'], function () {
-    gulp.src(['src/symbology/*.svg'])
+    gulp.src(['src/symbology/*.png'])
         .pipe(debug())
         .pipe(gulp.dest('build/symbology'))
         .pipe(gulp.dest('dist/symbology'));

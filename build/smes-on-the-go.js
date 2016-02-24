@@ -1,53 +1,48 @@
 /*global Promise, setTimeout, window, document, console, navigator, self, MouseEvent, Blob, FileReader, module, atob, Uint8Array, define */
-/*global ReverseGeocoder, fetch */
+/*global ReverseGeocoder, fetch, idb, IDBKeyRange */
 
 
-var SMESMarkStore = function () {
+var SMESMarkStore = function (storeOptions) {
     "use strict";
 
     var smesMarkStore = this;
+    storeOptions = storeOptions || {};
 
-    smesMarkStore.useLocalStore = smesMarkStore.localStorageAvailable();
-    smesMarkStore.maxRequests = 15;
+    smesMarkStore.maxRequests = 12;
     smesMarkStore.perNumberOfSeconds = 60;
     smesMarkStore.lastStorageTimeStamp = Date.now();
     smesMarkStore.baseURL = 'https://maps.land.vic.gov.au/lvis/services/smesDataDelivery';
-    smesMarkStore.updateIndex = [];
-    smesMarkStore.newIndex = [];
     smesMarkStore.tooManyMarks = false;
+    smesMarkStore.cacheDays = storeOptions.cacheDays || 14;
+    smesMarkStore.msecPerDay = 1000 * 60 * 60 * 24;
+    smesMarkStore.markData = {};
 
-    if (smesMarkStore.useLocalStore) {
-        smesMarkStore.retrieveStoredMarks();
-    } else {
-        smesMarkStore.markData = {};
+
+    if (storeOptions.loadMark) {
+        smesMarkStore.loadMark = storeOptions.loadMark;
     }
 
+    if (storeOptions.finishedRetrieve) {
+        smesMarkStore.finishedRetrieve = storeOptions.finishedRetrieve;
+    }
 
-    //Add a before unload event to write marks to storage
     window.addEventListener("beforeunload", function (e) {
         // Do something
         smesMarkStore.executeSaveMarks();
     }, false);
-
-    //After current processing is finished, remove any marks older than 14 days
-    window.setTimeout(function () {
-        smesMarkStore.markData = smesMarkStore.removeOldMarks(14);
-    }, 0);
 };
 
 
 SMESMarkStore.prototype.localStorageAvailable = function () {
     "use strict";
 
-    try {
-        var storage = window.localStorage,
-            x = '__storage_test__';
-        storage.setItem(x, x);
-        storage.removeItem(x);
-        return true;
-    } catch (e) {
-        return false;
-    }
+    return idb.open('smes-db', 1, function (upgradeDb) {
+        var store = upgradeDb.createObjectStore('smes-marks', {
+            keyPath: 'nineFigureNumber'
+        });
+        store.createIndex('last-update', 'lastUpdated');
+    });
+
 };
 
 SMESMarkStore.prototype.retrieveStoredMarks = function () {
@@ -55,25 +50,30 @@ SMESMarkStore.prototype.retrieveStoredMarks = function () {
 
     var smesMarkStore = this;
     var storedData, mark;
+    var comparisonMSec = Date.now() - (smesMarkStore.cacheDays * smesMarkStore.msecPerDay) + 1;
 
-    if (!smesMarkStore.useLocalStore) {
-        return;
-    }
-
-    storedData = window.localStorage.getItem('smes-mark-data');
-
-    if (storedData) {
-        smesMarkStore.markData = JSON.parse(storedData);
-        //Add all marks to the new mark index - to ensure they will get loaded to the UI
-        for (mark in smesMarkStore.markData) {
-            smesMarkStore.newIndex.push(mark);
-        }
-
+    if (!window.localStorage) {
+        smesMarkStore.useLocalStore = false;
     } else {
-        smesMarkStore.markData = {};
+        smesMarkStore.useLocalStore = true;
+        smesMarkStore.markData = JSON.parse(window.localStorage.getItem('smes-mark-data') || "");
+        var markKeys = Object.keys(smesMarkStore.markData);
+
+        markKeys.forEach(function (nineFigureNumber) {
+            if (smesMarkStore.markData[nineFigureNumber] > comparisonMSec) {
+                smesMarkStore.loadMark.apply(smesMarkStore, [mark, "new"]);
+            } else {
+                delete smesMarkStore.markData[nineFigureNumber];
+            }
+
+        });
+
     }
 
-
+    //If a callback was specified, call it now
+    if (smesMarkStore.finishedRetrieve) {
+        smesMarkStore.finishedRetrieve.apply(smesMarkStore);
+    }
 
 
 };
@@ -85,9 +85,13 @@ SMESMarkStore.prototype.clearStoredMarks = function () {
 
     if (!smesMarkStore.useLocalStore) {
         return;
+    } else {
+        try {
+            window.localStorage.removeItem('smes-mark-data');
+        } catch (err) {
+            console.log(err);
+        }
     }
-
-    window.localStorage.removeItem('smes-mark-data');
 
 };
 
@@ -107,13 +111,13 @@ SMESMarkStore.prototype.saveMarksToStorage = function () {
     storageTimeStamp = smesMarkStore.lastStorageTimeStamp;
 
     //Set function to write storage after 5 minutes.
-    // if another write request comes in within 5 minutes, smesMarkStore.lastStorageTimeStamp variable will have changed and the write will be aborted.
+    // if another write request comes in within 10 minutes, smesMarkStore.lastStorageTimeStamp variable will have changed and the write will be aborted.
     window.setTimeout(function () {
         if (storageTimeStamp === smesMarkStore.lastStorageTimeStamp) {
             smesMarkStore.executeSaveMarks();
 
         }
-    }, 300000);
+    }, 600000);
 
 };
 
@@ -129,13 +133,13 @@ SMESMarkStore.prototype.executeSaveMarks = function () {
     } catch (e) {
         try {
             //Check total size - if >= 5MB then start culling - attempt to only store marks retrieved within the last 7 days
-            if (JSON.stringify(culledMarkData).length > 5000000) {
+            if (JSON.stringify(smesMarkStore.markData).length > 5000000) {
                 culledMarkData = smesMarkStore.removeOldMarks(7);
             }
 
             //Check total size - if still >= 5MB then start culling - attempt to only store marks retrieved in the last day
             if (JSON.stringify(culledMarkData).length > 5000000) {
-                culledMarkData = smesMarkStore.removeOldMarks(7);
+                culledMarkData = smesMarkStore.removeOldMarks(14);
             }
 
             window.localStorage.setItem('smes-mark-data', JSON.stringify(culledMarkData));
@@ -151,39 +155,17 @@ SMESMarkStore.prototype.removeOldMarks = function (numberOfDays) {
 
     var smesMarkStore = this;
     var individualMark;
-    var comparisonDate;
+    var comparisonMSec = Date.now() - (numberOfDays * smesMarkStore.msecPerDay) + 1;
     var newMarkData = smesMarkStore.markData;
 
-    for (individualMark in newMarkData) {
-        if (smesMarkStore.isNumberOfDaysOld(newMarkData[individualMark].lastUpdated, numberOfDays)) {
-            delete newMarkData[individualMark];
+    newMarkData.forEach(function (mark) {
+        if (mark.lastUpdated < comparisonMSec) {
+            delete newMarkData[mark.nineFigureNumber];
         }
-    }
+
+    });
 
     return newMarkData;
-};
-
-SMESMarkStore.prototype.isNumberOfDaysOld = function (dateValue, number) {
-    "use strict";
-
-    var comparisonDate = new Date(dateValue);
-    var todaysDate = new Date();
-    var msecPerDay = 1000 * 60 * 60 * 24;
-
-    // Get the difference in milliseconds.
-    var interval = todaysDate.getTime() - comparisonDate.getTime();
-
-    // Calculate how many days the interval contains. Subtract that
-    // many days from the interval to determine the remainder.
-    var days = Math.floor(interval / msecPerDay);
-
-    if (days >= number) {
-        return true;
-    } else {
-        return false;
-    }
-
-
 };
 
 SMESMarkStore.prototype.delayNextRequest = function () {
@@ -196,7 +178,7 @@ SMESMarkStore.prototype.delayNextRequest = function () {
 
 };
 
-SMESMarkStore.prototype.requestMarkInformation = function (cLat, cLong, cRadius, callback, tooManyCallback) {
+SMESMarkStore.prototype.requestMarkInformation = function (requestOptions) {
     "use strict";
 
     var smesMarkStore = this;
@@ -205,7 +187,7 @@ SMESMarkStore.prototype.requestMarkInformation = function (cLat, cLong, cRadius,
     var executionDelay = 500;
 
     //If an unacceptable radius has been supplied, don't call the service
-    if (cRadius > 2) {
+    if (requestOptions.cRadius > 2) {
         return;
     }
 
@@ -231,20 +213,20 @@ SMESMarkStore.prototype.requestMarkInformation = function (cLat, cLong, cRadius,
         if (currentRequestTimeStamp === smesMarkStore.lastQueuedTimeStamp) {
             console.log("Processing request");
             smesMarkStore.lastSuccesfullRetrieve = new Date();
-            smesMarkStore.retrieveMarkInformation(cLat, cLong, cRadius).then(function (marksRetrieved) {
+            smesMarkStore.retrieveMarkInformation(requestOptions.cLat, requestOptions.cLong, requestOptions.cRadius).then(function (marksRetrieved) {
                 //Check data element is present, if so process it, and run the callback function
                 if (marksRetrieved) {
                     smesMarkStore.processRetrievedMarks(marksRetrieved).then(function () {
                         console.log("Executing callback");
                         smesMarkStore.tooManyMarks = false;
-                        callback.apply(this);
+                        requestOptions.finishedCallback.apply(smesMarkStore);
                     });
 
                 }
             }).catch(function (err) {
                 if (err === "Too many marks") {
                     smesMarkStore.tooManyMarks = true;
-                    tooManyCallback.apply(this);
+                    requestOptions.tooManyCallback.apply(smesMarkStore);
                 }
                 console.log(err);
             });
@@ -261,104 +243,89 @@ SMESMarkStore.prototype.processRetrievedMarks = function (retrievedData) {
     "use strict";
 
     var smesMarkStore = this;
-    var dataObject, objectProp;
 
     return new Promise(function (resolve, reject) {
 
+        if (smesMarkStore.useLocalStore) {
+            var tStamp = new Date();
 
-        //reset indexes of new and updates marks
-        smesMarkStore.updateIndex = [];
-        smesMarkStore.newIndex = [];
+            retrievedData.forEach(function (markData) {
+                var matches;
+                var loadType = "new";
 
-        //console.log("Mark count: " + smesMarkStore.countMarks());
+                if (smesMarkStore.markData[markData.nineFigureNumber]) {
+                    //Already have the mark - check if it's changed
+                    var markKeys = Object.keys(markData);
+                    loadType = "update";
+                    matches = true;
 
-        for (var i = 0; i < retrievedData.length; i++) {
-            dataObject = retrievedData[i];
-
-            //Check whether this mark is already in the store
-            if (!smesMarkStore.markData[dataObject.nineFigureNumber]) {
-                //Don't have mark, so add it
-                smesMarkStore.addUpdateValueInStore(dataObject);
-                smesMarkStore.newIndex.push(dataObject.nineFigureNumber);
-
-            } else {
-                //Already have this mark - Check whether the mark was last retrieved within a day
-                if (smesMarkStore.isNumberOfDaysOld(smesMarkStore.markData[dataObject.nineFigureNumber].lastUpdated || 0, 1)) {
-                    //Check whether mark information has changed
-                    if (JSON.stringify(dataObject) !== JSON.stringify(smesMarkStore.markData[dataObject.nineFigureNumber].data)) {
-                        //data has changed so store data, store hash, remove address, and update lastUpdated
-                        smesMarkStore.addUpdateValueInStore(dataObject);
-                        smesMarkStore.updateIndex.push(dataObject.nineFigureNumber);
-                    } else {
-                        //Latest data is the same so change the lastUpdated value to now
-                        smesMarkStore.markData[dataObject.nineFigureNumber].lastUpdated = Date.now();
+                    for (var k = 0; k < markKeys.length; k++) {
+                        //Work throught the returned data keys and compare the record to the db
+                        if (markData[markKeys[k]] !== smesMarkStore.markData[markData.nineFigureNumber][markKeys[k]]) {
+                            matches = false;
+                            break;
+                        }
                     }
                 }
 
-            }
+                if (matches) {
+                    //Mark matches what we already have, so re-set last updated and move on
+                    smesMarkStore.markData[markData.nineFigureNumber].lastUpdated = Date.now();
 
+                } else {
+                    //Don't have this mark, so add it and call the loading function
+                    markData.lastUpdated = Date.now();
+                    smesMarkStore.markData[markData.nineFigureNumber] = markData;
+                    smesMarkStore.loadMark.apply(smesMarkStore, [markData, loadType]);
+                }
+            });
+
+            //Trigger process to save marks into browser storage
+            smesMarkStore.saveMarksToStorage();
+
+
+            resolve(true);
+
+        } else {
+            //Not using record store, so just load it directly as a new mark
+            retrievedData.forEach(function (markData) {
+                smesMarkStore.loadMark.apply(smesMarkStore, [markData, "new"]);
+            });
+
+            resolve(true);
         }
 
-        resolve(true);
-
-        //console.log("Mark count: " + smesMarkStore.countMarks());
-
-        //Trigger process to save marks into browser storage
-        smesMarkStore.saveMarksToStorage();
 
     });
-
-
 };
 
-
-SMESMarkStore.prototype.countMarks = function () {
-    "use strict";
-
-    var smesMarkStore = this;
-    var objectProp;
-    var markCounter = 0;
-
-
-    //Simple concatenation of the properties of the object - up to 24 vals
-    for (objectProp in smesMarkStore.markData) {
-        markCounter += 1;
-    }
-
-    return markCounter;
-};
-
-SMESMarkStore.prototype.addUpdateValueInStore = function (dataObject) {
-    "use strict";
-
-    var smesMarkStore = this;
-
-    if (!smesMarkStore.markData[dataObject.nineFigureNumber]) {
-        smesMarkStore.markData[dataObject.nineFigureNumber] = {};
-    }
-
-    smesMarkStore.markData[dataObject.nineFigureNumber].data = dataObject;
-    delete smesMarkStore.markData[dataObject.nineFigureNumber].address;
-    smesMarkStore.markData[dataObject.nineFigureNumber].lastUpdated = Date.now();
-
-};
 
 SMESMarkStore.prototype.setAddress = function (nineFigureNumber, address) {
     "use strict";
 
     var smesMarkStore = this;
 
-    smesMarkStore.markData[nineFigureNumber].address = address;
-
+    if (smesMarkStore.useLocalStore) {
+        if (smesMarkStore.markData[nineFigureNumber]) {
+            smesMarkStore.markData[nineFigureNumber].address = address;
+        }
+    }
 };
 
 SMESMarkStore.prototype.returnAddress = function (nineFigureNumber) {
     "use strict";
 
     var smesMarkStore = this;
+    var address = "";
 
-    var surveyMark = smesMarkStore.markData[nineFigureNumber] || null;
-    return surveyMark.address || "";
+    if (smesMarkStore.useLocalStore) {
+        if (smesMarkStore.markData[nineFigureNumber]) {
+            address = smesMarkStore.markData[nineFigureNumber].address || "";
+        }
+    }
+
+    return address;
+
 
 };
 
@@ -375,13 +342,6 @@ SMESMarkStore.prototype.retrieveMarkInformation = function (cLat, cLong, cRadius
 
     return new Promise(function (resolve, reject) {
 
-        /*xr.get(smesMarkStore.baseURL + '/getMarkInformation', {
-                searchType: "Location",
-                latitude: cLat,
-                longitude: cLong,
-                radius: cRadius,
-                format: "Full"
-            })*/
         fetch(smesMarkStore.baseURL + "/getMarkInformation?searchType=Location&latitude=" + cLat + "&longitude=" + cLong + "&radius=" + cRadius + "&format=Full", {
                 mode: 'cors'
             }).then(function (response) {
@@ -418,7 +378,7 @@ SMESMarkStore.prototype.retrieveMarkInformation = function (cLat, cLong, cRadius
                 smesMarkStore.delayNextRequest();
                 console.log("Too many requests");
                 //}
-                return Promise.reject(err);
+                reject(err);
             });
     });
 
@@ -542,16 +502,26 @@ SMESMarkStore.prototype.base64toBlob = function (b64Data, contentType, sliceSize
 var SMESGMap = function (elementId, options) {
     "use strict";
 
-    var melbourneCenter = new google.maps.LatLng(-37.813942, 144.9711861);
     var smesGMap = this;
+    var mapState = this.getMapState() || {};
+    var mapCenter;
+
+    if (mapState.lat && mapState.lng) {
+        mapCenter = new google.maps.LatLng(mapState.lat, mapState.lng);
+    } else {
+        //default to centre of melbourne if nothing saved
+        mapCenter = new google.maps.LatLng(-37.813942, 144.9711861);
+    }
+
 
     smesGMap.setupMapStyles();
+    smesGMap.mapStyleName = mapState.mapStyleName || "iovation";
 
     options = options || {};
 
     options.mapOptions = options.mapOptions || {
-        center: melbourneCenter,
-        zoom: 15,
+        center: mapCenter,
+        zoom: mapState.zoom || 15,
         mapTypeId: google.maps.MapTypeId.ROADMAP,
 
         mapTypeControl: false,
@@ -566,7 +536,7 @@ var SMESGMap = function (elementId, options) {
         },
         panControl: false,
         rotateControl: false,
-        styles: smesGMap.mapStyles.iovation
+        styles: this.mapStyles[this.mapStyleName]
     };
 
     smesGMap.mapOptions = options.mapOptions;
@@ -576,6 +546,7 @@ var SMESGMap = function (elementId, options) {
     smesGMap.currentZoom = 1;
     smesGMap.markerIcons = [];
     smesGMap.markerSize = 10;
+    smesGMap.pixelDensity = 1;
     smesGMap.markersHidden = false;
 
     smesGMap.map = new google.maps.Map(document.getElementById(elementId), smesGMap.mapOptions);
@@ -595,8 +566,6 @@ var SMESGMap = function (elementId, options) {
         closeBoxURL: "",
         infoBoxClearance: new google.maps.Size(4, 4)
     });
-
-    smesGMap.getMapPreference();
 
 
     google.maps.event.addListener(smesGMap.map, 'zoom_changed', function () {
@@ -620,6 +589,7 @@ var SMESGMap = function (elementId, options) {
 
     google.maps.event.addListener(smesGMap.map, 'idle', function () {
         smesGMap.resizeIcons();
+        smesGMap.saveMapState();
     });
 
 
@@ -656,7 +626,7 @@ var SMESGMap = function (elementId, options) {
 
 
     //Attempt oto move map to current user coordinates
-    smesGMap.geoLocate();
+    //smesGMap.geoLocate();
     //Make sure infobox is correct size
     smesGMap.resizeInfoBox();
 
@@ -686,54 +656,42 @@ SMESGMap.prototype.resizeInfoBox = function () {
 
 };
 
-SMESGMap.prototype.localStorageAvailable = function () {
-    "use strict";
-
-    try {
-        var storage = window.localStorage,
-            x = '__storage_test__';
-        storage.setItem(x, x);
-        storage.removeItem(x);
-        return true;
-    } catch (e) {
-        return false;
-    }
-};
-
-SMESGMap.prototype.getMapPreference = function () {
+SMESGMap.prototype.getMapState = function () {
     "use strict";
 
     var smesGMap = this;
-    var storedData;
+    var mapState = {};
 
 
-    if (!smesGMap.localStorageAvailable) {
-        return;
+    if (!window.localStorage) {
+        return mapState;
     }
 
-    storedData = window.localStorage.getItem('map-style');
+    mapState = JSON.parse(window.localStorage.getItem('map-state')) || {};
 
-    if (storedData) {
-        smesGMap.changeMapStyle(storedData);
-        smesGMap.mapStyleName = storedData;
-    }
-
+    return mapState;
 
 };
 
-
-SMESGMap.prototype.saveStylePreference = function (stlyeName) {
+SMESGMap.prototype.saveMapState = function () {
     "use strict";
 
     var smesGMap = this;
+    var mapState = {};
+    var mapCoords = smesGMap.getMapPosition();
 
-    if (!smesGMap.localStorageAvailable) {
+    mapState.zoom = smesGMap.getZoom();
+    mapState.mapStyleName = smesGMap.mapStyleName;
+    mapState.lat = mapCoords.lat;
+    mapState.lng = mapCoords.lng;
+
+    if (!window.localStorage) {
         return;
     }
 
 
     try {
-        window.localStorage.setItem('map-style', stlyeName);
+        window.localStorage.setItem('map-state', JSON.stringify(mapState));
     } catch (e) {
         //Give up
         console.log("Write to local storage failed");
@@ -758,6 +716,18 @@ SMESGMap.prototype.geoLocate = function () {
 
 };
 
+SMESGMap.prototype.getMapPosition = function () {
+    "use strict";
+
+    var smesGMap = this;
+    var mapCenter = smesGMap.map.getCenter();
+    var position = {};
+
+    position.lat = mapCenter.lat();
+    position.lng = mapCenter.lng();
+
+    return position;
+};
 
 
 SMESGMap.prototype.getZoom = function () {
@@ -792,8 +762,8 @@ SMESGMap.prototype.addMarker = function (marker) {
 
 
     var icon = {
-        url: markerIcon + ".svg",
-        size: new google.maps.Size(smesGMap.markerSize, smesGMap.markerSize),
+        url: markerIcon + ".png",
+        size: new google.maps.Size(smesGMap.markerSize * smesGMap.pixelDensity, smesGMap.markerSize * smesGMap.pixelDensity),
         scaledSize: new google.maps.Size(smesGMap.markerSize, smesGMap.markerSize)
     };
 
@@ -874,8 +844,8 @@ SMESGMap.prototype.updateMarker = function (marker) {
     //If a marker was found and defined continue processing
     if (mapMarker) {
         icon = {
-            url: markerIcon + ".svg",
-            size: new google.maps.Size(smesGMap.markerSize, smesGMap.markerSize),
+            url: markerIcon + ".png",
+            size: new google.maps.Size(smesGMap.markerSize * smesGMap.pixelDensity, smesGMap.markerSize * smesGMap.pixelDensity),
             scaledSize: new google.maps.Size(smesGMap.markerSize, smesGMap.markerSize)
         };
 
@@ -913,9 +883,10 @@ SMESGMap.prototype.setSelectedMarker = function (marker) {
 
     newSize = smesGMap.markerSize * 2;
     icon.scaledSize = new google.maps.Size(newSize, newSize);
-    icon.size = new google.maps.Size(newSize, newSize);
+    icon.size = new google.maps.Size(newSize * smesGMap.pixelDensity, newSize * smesGMap.pixelDensity);
     icon.url = url;
 
+    marker.zIndex = 100;
     marker.setIcon(icon);
     marker.isSelected = true;
 };
@@ -937,7 +908,7 @@ SMESGMap.prototype.resetSelectedMarker = function () {
             url = url.replace("selected-", "");
 
             icon.scaledSize = new google.maps.Size(smesGMap.markerSize, smesGMap.markerSize);
-            icon.size = new google.maps.Size(smesGMap.markerSize, smesGMap.markerSize);
+            icon.size = new google.maps.Size(smesGMap.markerSize * smesGMap.pixelDensity, smesGMap.markerSize * smesGMap.pixelDensity);
             icon.url = url;
 
             smesGMap.markers[i].setIcon(icon);
@@ -1050,7 +1021,7 @@ SMESGMap.prototype.resizeIcons = function () {
         }
 
         icon.scaledSize = new google.maps.Size(newSize, newSize);
-        icon.size = new google.maps.Size(newSize, newSize);
+        icon.size = new google.maps.Size(newSize * smesGMap.pixelDensity, newSize * smesGMap.pixelDensity);
 
         //Update icon
         smesGMap.markers[markerCounter].setIcon(icon);
@@ -1292,7 +1263,6 @@ SMESGMap.prototype.changeMapStyle = function (styleName) {
         styles: styleDetails
     });
 
-    smesGMap.saveStylePreference(styleName);
 };
 
 /**
@@ -2094,6 +2064,7 @@ SMESGMap.prototype.setupMapStyles = function () {
 
 
 //Variables for display
+var startingUp;
 var loader;
 var connectionIndicator, connectIcon, connectToolTip;
 var locateButton;
@@ -2111,9 +2082,17 @@ var pcmSearchText = "PCM";
 var currentNineFigureNumber;
 var currentLatLng = {};
 var currentRadius;
+//Set-up the min / max lat /  lng for Vic  -no point in sending a request outside of these coords
+var vicExtents = {};
+vicExtents.minLat = -39.56912880425731;
+vicExtents.maxLat = -33.43769367843318;
+vicExtents.minLng = 140.64925642150877;
+vicExtents.maxLng = 152.03658552307127;
 
 
 window.addEventListener('load', function (e) {
+    //Set variable to bypass initial load when map is getting set
+    startingUp = true;
 
     loader = document.getElementById("loader");
     connectionIndicator = document.getElementById("connection-indicator");
@@ -2129,13 +2108,22 @@ window.addEventListener('load', function (e) {
 
     overlayEl = document.getElementById("screen-overlay");
 
+
     setupMap();
 
-    //Allow oppporunity for geolocation to complete prior to loading marks
+    var markStoreOptions = {};
+    markStoreOptions.loadMark = loadMark;
+    markStoreOptions.finishedRetrieve = requestMarkInformation;
+
+
+    markStore = new SMESMarkStore(markStoreOptions);
+
+
+    //Wait one second before starting mark loading process
     window.setTimeout(function () {
-    loadMarks();
-    displayZoomMessage();
-    },50);
+        startingUp = false;
+        markStore.retrieveStoredMarks();
+    }, 1000);
 
     //When current processing is one, set-up map style click handlers
     window.setTimeout(function () {
@@ -2153,7 +2141,7 @@ window.addEventListener('load', function (e) {
 
             }
         }
-    }, 100);
+    }, 0);
 
 
 }, false);
@@ -2213,8 +2201,11 @@ function setupMap() {
         });
     }
 
+    //Set double pixel densi=ty for iOS
+    if (mobileOS.indexOf("iOS") === 0) {
+        smesMap.pixelDensity = 2;
+    }
 
-    markStore = new SMESMarkStore();
     smesMap.setUpAutoComplete("location-search", "clear-search-div");
 
 
@@ -2233,17 +2224,39 @@ function geoLocate() {
 
 function requestMarkInformation() {
 
-    var mapCenter, radius;
+    if (startingUp) {
+        return;
+    }
+
+    var mapCenter, radius, requestOptions;
 
     mapCenter = smesMap.map.getCenter();
     radius = smesMap.mapSize || 2;
+
+    //TO-DO check if map center is outside of victoria
 
     showLoader();
 
     console.log("requestMarkInformation");
 
-    markStore.requestMarkInformation(mapCenter.lat(), mapCenter.lng(), radius, loadMarks, displayZoomMessage);
-    //console.log(markStore.newIndex);
+
+    requestOptions = {};
+    requestOptions.cLat = mapCenter.lat();
+    requestOptions.cLong = mapCenter.lng();
+    requestOptions.cRadius = radius;
+    requestOptions.finishedCallback = displayZoomMessage;
+    requestOptions.tooManyCallback = displayZoomMessage;
+
+    //check that the coordinates are somewhere near Victoria before sending the request
+    if (requestOptions.cLat < vicExtents.minLat || requestOptions.cLat > vicExtents.maxLat ||
+        requestOptions.cLong < vicExtents.minLng || requestOptions.cLong < vicExtents.minLng) {
+        console.log("Outside of Vic");
+        hideLoader();
+        return;
+    }
+
+    markStore.requestMarkInformation(requestOptions);
+
 
 }
 
@@ -2301,57 +2314,50 @@ function displayZoomMessage() {
 
 }
 
-function loadMarks() {
+function loadMark(surveyMark, loadType) {
     //Work through the new markers and add to the map, then work through updated markers and update on the map
     var preparedMark;
 
-    console.log("loadMarks");
+    //console.log("loadMarks");
 
 
+    preparedMark = prepMarkForMap(surveyMark);
 
+    if (loadType === "new") {
+        smesMap.addMarker(preparedMark.marker);
+        smesMap.addLabel(preparedMark.label);
 
-    //Add new marks
-    for (var n = 0; n < markStore.newIndex.length; n++) {
+    } else {
 
+        smesMap.updateMarker(preparedMark.marker);
+        smesMap.updateLabel(preparedMark.label);
 
-        preparedMark = prepMarkForMap(markStore.markData[markStore.newIndex[n]].data, markStore.markData[markStore.newIndex[n]].address || '');
 
         smesMap.addMarker(preparedMark.marker);
         smesMap.addLabel(preparedMark.label);
 
     }
 
-    //Update marks
-    for (var u = 0; u < markStore.updateIndex.length; u++) {
-
-
-        preparedMark = prepMarkForMap(markStore.markData[markStore.updateIndex[u]].data, markStore.markData[markStore.updateIndex[u]].address || '');
-
-
-
-        smesMap.updateMarker(preparedMark.marker);
-        smesMap.updateLabel(preparedMark.label);
-
-    }
-
-    //Call the zoom level to show / hide marks and labels as required
-    smesMap.setZoomLevel();
-    displayZoomMessage();
 }
 
 /**Returns an object with the mark object and the mark label object
  **/
-function prepMarkForMap(surveyMark, address) {
+function prepMarkForMap(surveyMark) {
     var eventListeners = {};
     var marker = {};
     var label = {};
-    var navigateString;
+    var navigateString, cardDiv;
 
     var closeButton = '<button id="close-info-box" class="close-button mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--icon">' +
         '<i class="material-icons">close</i>' +
         '</button>';
 
-    var cardDiv = '<div class="mdl-card infobox mdl-shadow--3dp overflow-x-visible">';
+    if (mobileOS === "iOSSafari") {
+        cardDiv = '<div class="mdl-card infobox mobile-safari mdl-shadow--3dp overflow-x-visible">';
+    } else {
+        cardDiv = '<div class="mdl-card infobox mdl-shadow--3dp overflow-x-visible">';
+    }
+
     var contentSDiv = '<div class="card-content"><div class="card-left">';
     var contentMDiv = '</div><div class="card-value">';
     var contentEDiv = '</div></div>';
@@ -2374,7 +2380,7 @@ function prepMarkForMap(surveyMark, address) {
         '<div class="info-window-header">' +
         '<div class="section__circle-container">' +
         '<div class="section__circle-container__circle card-symbol"> ' +
-        '<img class="info-symbol" src="symbology/' + markType.iconName + '.svg">' +
+        '<img class="info-symbol" src="symbology/' + markType.iconName + '.png">' +
         '</div>' +
         '</div>' +
         '<div class="header-text">' +
@@ -2631,8 +2637,13 @@ function isMobile() {
 
     if (userAgent.match(/Android/i)) {
         return "Android";
-    } else if (userAgent.match(/iPhone/i) || userAgent.match(/iPad/i)) {
-        return "iOS";
+    } else if ((/(iPad|iPhone|iPod)/gi).test(userAgent)) {
+        if (!(/CriOS/).test(userAgent) && !(/FxiOS/).test(userAgent) && !(/OPiOS/).test(userAgent) && !(/mercury/).test(userAgent)) {
+            return "iOSSafari";
+        } else {
+            return "iOS";
+        }
+
     } else {
         return "";
     }

@@ -1,5 +1,5 @@
 CACHE MANIFEST
-# 1456046846941
+# 1456307655139
 # Use cache for material design files and promise polyfill
 
 CACHE:
@@ -10,36 +10,34 @@ sotg-lib.min.js
 smes-on-the-go.min.js
 
 favicon.ico
-symbology/ahdapprox-pm.svg
+symbology/ahdapprox-pm.png
+symbology/gda94approx-pm.png
+symbology/scn-gda94-ahd-pm.png
+symbology/scn-gda94-ahdapprox-pm.png
+symbology/scn-gda94-pm.png
+symbology/scn-ahd-pm.png
+symbology/scn-gda94-pcm.png
+symbology/selected-ahdapprox-pm.png
+symbology/selected-gda94approx-pm.png
+symbology/selected-scn-ahd-pm.png
+symbology/selected-scn-gda94-ahd-pm.png
+symbology/selected-scn-gda94-ahdapprox-pm.png
+symbology/selected-scn-gda94-pcm.png
+symbology/selected-scn-gda94-pm.png
 apple-touch-icon-114x114.png
-symbology/defective.svg
 apple-touch-icon-120x120.png
-symbology/gda94approx-pm.svg
 apple-touch-icon-144x144.png
-symbology/scn-ahd-pm.svg
 apple-touch-icon-152x152.png
-symbology/scn-gda94-ahd-pm.svg
 apple-touch-icon-57x57.png
-symbology/scn-gda94-ahdapprox-pm.svg
 apple-touch-icon-60x60.png
-symbology/scn-gda94-pcm.svg
 apple-touch-icon-72x72.png
-symbology/scn-gda94-pm.svg
 apple-touch-icon-76x76.png
-symbology/selected-ahdapprox-pm.svg
 favicon-128.png
-symbology/selected-defective.svg
 favicon-16x16.png
-symbology/selected-gda94approx-pm.svg
 favicon-196x196.png
-symbology/selected-scn-ahd-pm.svg
 favicon-32x32.png
-symbology/selected-scn-gda94-ahd-pm.svg
 favicon-96x96.png
-symbology/selected-scn-gda94-ahdapprox-pm.svg
-symbology/selected-scn-gda94-pcm.svg
 mstile-144x144.png
-symbology/selected-scn-gda94-pm.svg
 mstile-150x150.png
 mstile-310x150.png
 mstile-310x310.png
