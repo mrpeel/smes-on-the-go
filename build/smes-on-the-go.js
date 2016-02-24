@@ -285,8 +285,6 @@ SMESMarkStore.prototype.processRetrievedMarks = function (retrievedData) {
 
             resolve(true);
         }
-
-
     });
 };
 
