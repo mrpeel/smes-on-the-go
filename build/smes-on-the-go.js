@@ -213,6 +213,8 @@ SMESMarkStore.prototype.requestMarkInformation = function (requestOptions) {
                 if (err === "Too many marks") {
                     smesMarkStore.tooManyMarks = true;
                     requestOptions.tooManyCallback.apply(smesMarkStore);
+                } else {
+                    requestOptions.errorCallback.apply(smesMarkStore);
                 }
                 console.log(err);
             });
@@ -331,11 +333,15 @@ SMESMarkStore.prototype.retrieveMarkInformation = function (cLat, cLong, cRadius
 
     return new Promise(function (resolve, reject) {
 
+        console.log("Fetching: " + smesMarkStore.baseURL + "/getMarkInformation?searchType=Location&latitude=" + cLat + "&longitude=" + cLong + "&radius=" + cRadius + "&format=Full");
+
         fetch(smesMarkStore.baseURL + "/getMarkInformation?searchType=Location&latitude=" + cLat + "&longitude=" + cLong + "&radius=" + cRadius + "&format=Full", {
                 mode: 'cors'
             }).then(function (response) {
                 return response.json();
             }).then(function (jsonResponse) {
+                console.log("Response");
+                console.log(jsonResponse);
 
                 //Check for success - the messages element will not be present for success
                 if (typeof jsonResponse.messages === 'undefined') {
@@ -352,7 +358,7 @@ SMESMarkStore.prototype.retrieveMarkInformation = function (cLat, cLong, cRadius
                     } else if (jsonResponse.messages.message === "No survey marks matched the criteria provided.") {
                         //Check for no marks
                         console.log("No marks found");
-                        reject("No marks found");
+                        resolve([]);
                     } else {
                         //another message returned, log it
                         console.log(jsonResponse.messages.message);
@@ -1203,6 +1209,7 @@ SMESGMap.prototype.checkSizeofMap = function () {
         smesGMap.mapSize = 0;
     }
 
+    return smesGMap.mapSize;
 
 };
 
@@ -2220,7 +2227,7 @@ function requestMarkInformation() {
     var mapCenter, radius, requestOptions;
 
     mapCenter = smesMap.map.getCenter();
-    radius = smesMap.mapSize || 2;
+    radius = smesMap.mapSize || smesMap.checkSizeofMap();
 
     //TO-DO check if map center is outside of victoria
 
@@ -2235,6 +2242,7 @@ function requestMarkInformation() {
     requestOptions.cRadius = radius;
     requestOptions.finishedCallback = displayZoomMessage;
     requestOptions.tooManyCallback = displayZoomMessage;
+    requestOptions.errorCallback = displayErrorMessage;
 
     //check that the coordinates are somewhere near Victoria before sending the request
     if (requestOptions.cLat < vicExtents.minLat || requestOptions.cLat > vicExtents.maxLat ||
@@ -2269,15 +2277,22 @@ function hideLoader() {
 
 }
 
+function displayErrorMessage() {
+    displayZoomMessage(true);
+}
 
-function displayZoomMessage() {
+function displayZoomMessage(hasError) {
 
     hideLoader();
+
+    hasError = hasError || false;
 
     var currentZoom = smesMap.getZoom();
     var zoomContent;
 
-    if (markStore.useLocalStore && currentZoom >= 14) {
+    if (hasError) {
+        zoomContent = "An error occurred while retrieving marks";
+    } else if (markStore.useLocalStore && currentZoom >= 14) {
         //zoomInMsg.innerHTML = '<span class="zoom-in-message-text">Displaying cached marks - zoom to refresh</span>';
         zoomContent = "Can't load marks at this zoom<br>Displaying cached marks only<br>Zoom in to load marks";
     } else {
@@ -2286,7 +2301,7 @@ function displayZoomMessage() {
     }
 
     //  If map size doesn't exist, the map is too small or there are too many marks to load then show the message
-    if (!smesMap.mapSize || smesMap.mapSize > 2 || currentZoom < 14 || markStore.tooManyMarks) {
+    if (!smesMap.mapSize || smesMap.mapSize > 2 || currentZoom < 14 || markStore.tooManyMarks || hasError) {
         connectIcon.textContent = 'cloud_off';
         connectionIndicator.classList.remove("pulsating");
         connectionIndicator.classList.remove("connected");
@@ -2628,7 +2643,9 @@ function isMobile() {
         return "Android";
     } else if ((/(iPad|iPhone|iPod)/gi).test(userAgent)) {
         if (!(/CriOS/).test(userAgent) && !(/FxiOS/).test(userAgent) && !(/OPiOS/).test(userAgent) && !(/mercury/).test(userAgent)) {
+            document.getElementById("location-search").value = "iOS Safari";
             return "iOSSafari";
+
         } else {
             return "iOS";
         }

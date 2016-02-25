@@ -213,6 +213,8 @@ SMESMarkStore.prototype.requestMarkInformation = function (requestOptions) {
                 if (err === "Too many marks") {
                     smesMarkStore.tooManyMarks = true;
                     requestOptions.tooManyCallback.apply(smesMarkStore);
+                } else {
+                    requestOptions.errorCallback.apply(smesMarkStore);
                 }
                 console.log(err);
             });
@@ -331,11 +333,15 @@ SMESMarkStore.prototype.retrieveMarkInformation = function (cLat, cLong, cRadius
 
     return new Promise(function (resolve, reject) {
 
+        console.log("Fetching: " + smesMarkStore.baseURL + "/getMarkInformation?searchType=Location&latitude=" + cLat + "&longitude=" + cLong + "&radius=" + cRadius + "&format=Full");
+
         fetch(smesMarkStore.baseURL + "/getMarkInformation?searchType=Location&latitude=" + cLat + "&longitude=" + cLong + "&radius=" + cRadius + "&format=Full", {
                 mode: 'cors'
             }).then(function (response) {
                 return response.json();
             }).then(function (jsonResponse) {
+                console.log("Response");
+                console.log(jsonResponse);
 
                 //Check for success - the messages element will not be present for success
                 if (typeof jsonResponse.messages === 'undefined') {
@@ -352,7 +358,7 @@ SMESMarkStore.prototype.retrieveMarkInformation = function (cLat, cLong, cRadius
                     } else if (jsonResponse.messages.message === "No survey marks matched the criteria provided.") {
                         //Check for no marks
                         console.log("No marks found");
-                        reject("No marks found");
+                        resolve([]);
                     } else {
                         //another message returned, log it
                         console.log(jsonResponse.messages.message);

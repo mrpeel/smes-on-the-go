@@ -721,6 +721,7 @@ SMESGMap.prototype.checkSizeofMap = function () {
         smesGMap.mapSize = 0;
     }
 
+    return smesGMap.mapSize;
 
 };
 
