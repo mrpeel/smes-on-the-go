@@ -11,7 +11,7 @@ var SMESGMap = function (elementId, options) {
 
     var smesGMap = this;
     var mapState = this.getMapState() || {};
-    var mapCenter;
+    var mapCenter, pixelVerticalOffSet;
 
     if (mapState.lat && mapState.lng) {
         mapCenter = new google.maps.LatLng(mapState.lat, mapState.lng);
@@ -56,6 +56,9 @@ var SMESGMap = function (elementId, options) {
     smesGMap.pixelDensity = 1;
     smesGMap.markersHidden = false;
 
+    smesGMap.pixelVerticalOffSet = options.pixelVerticalOffSet || 0;
+
+
     smesGMap.map = new google.maps.Map(document.getElementById(elementId), smesGMap.mapOptions);
     smesGMap.geocoder = new google.maps.Geocoder();
     smesGMap.infoWindow = new google.maps.InfoWindow();
@@ -63,7 +66,7 @@ var SMESGMap = function (elementId, options) {
         content: document.getElementById("infobox"),
         disableAutoPan: false,
         maxWidth: 440,
-        pixelOffset: new google.maps.Size(-220, 0),
+        pixelOffset: new google.maps.Size(-220, smesGMap.pixelVerticalOffSet),
         zIndex: 25,
         /*boxStyle: {
             background: "url('http://google-maps-utility-library-v3.googlecode.com/svn/trunk/infobox/examples/tipbox.gif') no - repeat",
@@ -140,6 +143,7 @@ var SMESGMap = function (elementId, options) {
     //Set-up resizing
     window.onresize = smesGMap.resizeInfoBox();
 
+    console.log(smesGMap.pixelVerticalOffSet);
 
 };
 
@@ -157,8 +161,9 @@ SMESGMap.prototype.resizeInfoBox = function () {
 
         smesGMap.infoBox.setOptions({
             maxWidth: windowWidth,
-            pixelOffset: new google.maps.Size(windowWidth * -0.5, 0)
+            pixelOffset: new google.maps.Size(windowWidth * -0.5, smesGMap.pixelVerticalOffSet)
         });
+
     }
 
 };

@@ -43,7 +43,11 @@ SMESMarkStore.prototype.retrieveStoredMarks = function () {
         smesMarkStore.useLocalStore = false;
     } else {
         smesMarkStore.useLocalStore = true;
-        smesMarkStore.markData = JSON.parse(window.localStorage.getItem('smes-mark-data') || "");
+        var storedMarks = window.localStorage.getItem('smes-mark-data');
+        if (storedMarks) {
+            smesMarkStore.markData = JSON.parse(storedMarks);
+        }
+
         var markKeys = Object.keys(smesMarkStore.markData);
 
         markKeys.forEach(function (nineFigureNumber) {
@@ -499,7 +503,7 @@ var SMESGMap = function (elementId, options) {
 
     var smesGMap = this;
     var mapState = this.getMapState() || {};
-    var mapCenter;
+    var mapCenter, pixelVerticalOffSet;
 
     if (mapState.lat && mapState.lng) {
         mapCenter = new google.maps.LatLng(mapState.lat, mapState.lng);
@@ -544,6 +548,9 @@ var SMESGMap = function (elementId, options) {
     smesGMap.pixelDensity = 1;
     smesGMap.markersHidden = false;
 
+    smesGMap.pixelVerticalOffSet = options.pixelVerticalOffSet || 0;
+
+
     smesGMap.map = new google.maps.Map(document.getElementById(elementId), smesGMap.mapOptions);
     smesGMap.geocoder = new google.maps.Geocoder();
     smesGMap.infoWindow = new google.maps.InfoWindow();
@@ -551,7 +558,7 @@ var SMESGMap = function (elementId, options) {
         content: document.getElementById("infobox"),
         disableAutoPan: false,
         maxWidth: 440,
-        pixelOffset: new google.maps.Size(-220, 0),
+        pixelOffset: new google.maps.Size(-220, smesGMap.pixelVerticalOffSet),
         zIndex: 25,
         /*boxStyle: {
             background: "url('http://google-maps-utility-library-v3.googlecode.com/svn/trunk/infobox/examples/tipbox.gif') no - repeat",
@@ -628,6 +635,7 @@ var SMESGMap = function (elementId, options) {
     //Set-up resizing
     window.onresize = smesGMap.resizeInfoBox();
 
+    console.log(smesGMap.pixelVerticalOffSet);
 
 };
 
@@ -645,8 +653,9 @@ SMESGMap.prototype.resizeInfoBox = function () {
 
         smesGMap.infoBox.setOptions({
             maxWidth: windowWidth,
-            pixelOffset: new google.maps.Size(windowWidth * -0.5, 0)
+            pixelOffset: new google.maps.Size(windowWidth * -0.5, smesGMap.pixelVerticalOffSet)
         });
+
     }
 
 };
@@ -2183,6 +2192,12 @@ function setupMap() {
     var mapOptions = {};
     mobileOS = isMobile();
 
+    mapOptions.pixelVerticalOffSet = 0;
+
+    //Set the negative vertical offset required for iOS
+    if (mobileOS.indexOf("iOS") === 0) {
+        mapOptions.pixelVerticalOffSet = -20;
+    }
 
     mapOptions.idle = requestMarkInformation;
     mapOptions.zoomChanged = displayZoomMessage;
@@ -2200,6 +2215,7 @@ function setupMap() {
     //Set double pixel densi=ty for iOS
     if (mobileOS.indexOf("iOS") === 0) {
         smesMap.pixelDensity = 2;
+
     }
 
     smesMap.setUpAutoComplete("location-search", "clear-search-div");
@@ -2403,7 +2419,7 @@ function prepMarkForMap(surveyMark) {
         '<div class="content">' +
         //'<div id="address' + surveyMark.nineFigureNumber + '" class="mark-address"></div>' +
         contentSDiv + 'Address:' + contentMDiv + '<div id="address' + surveyMark.nineFigureNumber + '"></div>' + contentEDiv +
-        contentSDiv + 'LL94:' + contentMDiv + surveyMark.latitude + ', ' + surveyMark.longitude + contentEDiv +
+        contentSDiv + 'GDA94:' + contentMDiv + surveyMark.latitude + ', ' + surveyMark.longitude + contentEDiv +
         contentSDiv + 'MGA:' + contentMDiv + surveyMark.zone + ', ' + surveyMark.easting + ', ' + surveyMark.northing + contentEDiv +
         contentSDiv + 'Technique:' + contentMDiv + surveyMark.gda94Technique + contentEDiv +
         contentSDiv + 'Ellipsoid height:' + contentMDiv + surveyMark.ellipsoidHeight + contentEDiv +
@@ -2643,7 +2659,6 @@ function isMobile() {
         return "Android";
     } else if ((/(iPad|iPhone|iPod)/gi).test(userAgent)) {
         if (!(/CriOS/).test(userAgent) && !(/FxiOS/).test(userAgent) && !(/OPiOS/).test(userAgent) && !(/mercury/).test(userAgent)) {
-            document.getElementById("location-search").value = "iOS Safari";
             return "iOSSafari";
 
         } else {

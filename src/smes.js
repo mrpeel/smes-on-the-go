@@ -125,6 +125,12 @@ function setupMap() {
     var mapOptions = {};
     mobileOS = isMobile();
 
+    mapOptions.pixelVerticalOffSet = 0;
+
+    //Set the negative vertical offset required for iOS
+    if (mobileOS.indexOf("iOS") === 0) {
+        mapOptions.pixelVerticalOffSet = -20;
+    }
 
     mapOptions.idle = requestMarkInformation;
     mapOptions.zoomChanged = displayZoomMessage;
@@ -142,6 +148,7 @@ function setupMap() {
     //Set double pixel densi=ty for iOS
     if (mobileOS.indexOf("iOS") === 0) {
         smesMap.pixelDensity = 2;
+
     }
 
     smesMap.setUpAutoComplete("location-search", "clear-search-div");
@@ -345,7 +352,7 @@ function prepMarkForMap(surveyMark) {
         '<div class="content">' +
         //'<div id="address' + surveyMark.nineFigureNumber + '" class="mark-address"></div>' +
         contentSDiv + 'Address:' + contentMDiv + '<div id="address' + surveyMark.nineFigureNumber + '"></div>' + contentEDiv +
-        contentSDiv + 'LL94:' + contentMDiv + surveyMark.latitude + ', ' + surveyMark.longitude + contentEDiv +
+        contentSDiv + 'GDA94:' + contentMDiv + surveyMark.latitude + ', ' + surveyMark.longitude + contentEDiv +
         contentSDiv + 'MGA:' + contentMDiv + surveyMark.zone + ', ' + surveyMark.easting + ', ' + surveyMark.northing + contentEDiv +
         contentSDiv + 'Technique:' + contentMDiv + surveyMark.gda94Technique + contentEDiv +
         contentSDiv + 'Ellipsoid height:' + contentMDiv + surveyMark.ellipsoidHeight + contentEDiv +
@@ -585,7 +592,6 @@ function isMobile() {
         return "Android";
     } else if ((/(iPad|iPhone|iPod)/gi).test(userAgent)) {
         if (!(/CriOS/).test(userAgent) && !(/FxiOS/).test(userAgent) && !(/OPiOS/).test(userAgent) && !(/mercury/).test(userAgent)) {
-            document.getElementById("location-search").value = "iOS Safari";
             return "iOSSafari";
 
         } else {

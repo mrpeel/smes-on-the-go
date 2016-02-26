@@ -43,7 +43,11 @@ SMESMarkStore.prototype.retrieveStoredMarks = function () {
         smesMarkStore.useLocalStore = false;
     } else {
         smesMarkStore.useLocalStore = true;
-        smesMarkStore.markData = JSON.parse(window.localStorage.getItem('smes-mark-data') || "");
+        var storedMarks = window.localStorage.getItem('smes-mark-data');
+        if (storedMarks) {
+            smesMarkStore.markData = JSON.parse(storedMarks);
+        }
+
         var markKeys = Object.keys(smesMarkStore.markData);
 
         markKeys.forEach(function (nineFigureNumber) {

@@ -5,6 +5,7 @@ body {
     font-family: 'Roboto', 'Helvetica', sans-serif;
     margin: 0;
     padding: 0;
+    position: fixed;
 }
 .title-text {
     font-family: "Muli";
@@ -474,6 +475,6 @@ body {
         margin-bottom: 15px;
     }
     .mobile-safari {
-        padding-bottom: 50px;
+        margin-bottom: 50px;
     }
 }

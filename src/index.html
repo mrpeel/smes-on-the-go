@@ -6,7 +6,7 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
 
     <meta name="description" content="Mobile web application for SMES survey mark information retrieval">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
     <title id="bar-title">SMES On The Go</title>
 
     <meta name="application-name" content="SMES On The Go" />
@@ -181,6 +181,25 @@
                     window.location.reload();
                 }
             }, false);
+
+            //Set-up periodic checking for updated - every 4 hours of app use
+            window.setInterval(function() {
+                if (navigator.onLine) {
+                    if (window.applicationCache.status != window.applicationCache.UNCACHED)
+                        window.applicationCache.update();
+                }
+            }, 4 * 60 * 60 * 1000);
+
+            //Check for iOS and re-set the viewport meta-tag to fix min and max scale - deals with iOS scaling issue 
+            if (navigator.userAgent.match(/(iPad|iPhone|iPod)/gi)) {
+                var metaTags = document.getElementsByTagName('meta');
+
+                for (var i = 0; i < metaTags.length; i++) {
+                    if (metaTags[i].name == "viewport") {
+                        metaTags[i].content = "width=device-width,initial-scale=1.0, minimum-scale=1.0, maximum-scale=1.0,shrink-to-fit=no";
+                    }
+                }
+            }
         }, false);
 
     </script>
