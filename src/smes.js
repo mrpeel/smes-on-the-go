@@ -129,7 +129,10 @@ function setupMap() {
 
     //Set the negative vertical offset required for iOS
     if (mobileOS.indexOf("iOS") === 0) {
-        mapOptions.pixelVerticalOffSet = -20;
+        mapOptions.pixelVerticalOffSet = -20 * 3 / window.devicePixelRatio;
+        if (mobileOS === "iOSSafari") {
+            mapOptions.mobileSafari = true;
+        }
     }
 
     mapOptions.idle = requestMarkInformation;
@@ -305,11 +308,7 @@ function prepMarkForMap(surveyMark) {
         '<i class="material-icons">close</i>' +
         '</button>';
 
-    if (mobileOS === "iOSSafari") {
-        cardDiv = '<div class="mdl-card infobox mobile-safari mdl-shadow--3dp overflow-x-visible">';
-    } else {
-        cardDiv = '<div class="mdl-card infobox mdl-shadow--3dp overflow-x-visible">';
-    }
+    cardDiv = '<div class="mdl-card infobox mdl-shadow--3dp overflow-x-visible">';
 
     var contentSDiv = '<div class="card-content"><div class="card-left">';
     var contentMDiv = '</div><div class="card-value">';

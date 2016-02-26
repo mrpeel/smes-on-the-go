@@ -547,8 +547,9 @@ var SMESGMap = function (elementId, options) {
     smesGMap.markerSize = 10;
     smesGMap.pixelDensity = 1;
     smesGMap.markersHidden = false;
-
+    //Special offsets for IOS and mobile safari
     smesGMap.pixelVerticalOffSet = options.pixelVerticalOffSet || 0;
+    smesGMap.mobileSafari = options.mobileSafari || false;
 
 
     smesGMap.map = new google.maps.Map(document.getElementById(elementId), smesGMap.mapOptions);
@@ -795,6 +796,14 @@ SMESGMap.prototype.addMarker = function (marker) {
         smesGMap.infoBox.setVisible(true);
         smesGMap.map.panTo(mapMarker.position);
 
+        //Mobile safari needs extra panning to account for their shitty, idiotic  nav bar at the bottom of the viewport
+        if (smesGMap.mobileSafari) {
+            window.setTimeout(function () {
+                var pixelPan = 25 * 3 / window.devicePixelRatio;
+                smesGMap.map.panBy(0, pixelPan);
+            }, 0);
+        }
+
 
         if (eventListeners && eventListeners.click) {
             eventListeners.click.apply();
@@ -820,6 +829,7 @@ SMESGMap.prototype.addMarker = function (marker) {
 
 
 };
+
 
 SMESGMap.prototype.updateMarker = function (marker) {
     "use strict";
@@ -2196,7 +2206,10 @@ function setupMap() {
 
     //Set the negative vertical offset required for iOS
     if (mobileOS.indexOf("iOS") === 0) {
-        mapOptions.pixelVerticalOffSet = -20;
+        mapOptions.pixelVerticalOffSet = -20 * 3 / window.devicePixelRatio;
+        if (mobileOS === "iOSSafari") {
+            mapOptions.mobileSafari = true;
+        }
     }
 
     mapOptions.idle = requestMarkInformation;
@@ -2372,11 +2385,7 @@ function prepMarkForMap(surveyMark) {
         '<i class="material-icons">close</i>' +
         '</button>';
 
-    if (mobileOS === "iOSSafari") {
-        cardDiv = '<div class="mdl-card infobox mobile-safari mdl-shadow--3dp overflow-x-visible">';
-    } else {
-        cardDiv = '<div class="mdl-card infobox mdl-shadow--3dp overflow-x-visible">';
-    }
+    cardDiv = '<div class="mdl-card infobox mdl-shadow--3dp overflow-x-visible">';
 
     var contentSDiv = '<div class="card-content"><div class="card-left">';
     var contentMDiv = '</div><div class="card-value">';

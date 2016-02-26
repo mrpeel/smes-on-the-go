@@ -55,8 +55,9 @@ var SMESGMap = function (elementId, options) {
     smesGMap.markerSize = 10;
     smesGMap.pixelDensity = 1;
     smesGMap.markersHidden = false;
-
+    //Special offsets for IOS and mobile safari
     smesGMap.pixelVerticalOffSet = options.pixelVerticalOffSet || 0;
+    smesGMap.mobileSafari = options.mobileSafari || false;
 
 
     smesGMap.map = new google.maps.Map(document.getElementById(elementId), smesGMap.mapOptions);
@@ -303,6 +304,14 @@ SMESGMap.prototype.addMarker = function (marker) {
         smesGMap.infoBox.setVisible(true);
         smesGMap.map.panTo(mapMarker.position);
 
+        //Mobile safari needs extra panning to account for their shitty, idiotic  nav bar at the bottom of the viewport
+        if (smesGMap.mobileSafari) {
+            window.setTimeout(function () {
+                var pixelPan = 25 * 3 / window.devicePixelRatio;
+                smesGMap.map.panBy(0, pixelPan);
+            }, 0);
+        }
+
 
         if (eventListeners && eventListeners.click) {
             eventListeners.click.apply();
@@ -328,6 +337,7 @@ SMESGMap.prototype.addMarker = function (marker) {
 
 
 };
+
 
 SMESGMap.prototype.updateMarker = function (marker) {
     "use strict";
