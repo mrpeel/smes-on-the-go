@@ -35,7 +35,7 @@ body {
     margin-top: 0;
 }
 .logo-image {
-    margin: 0px 2px 2px 2px;
+    margin: 0px 2px 3px 2px;
 }
 
 /* App drawer */
@@ -450,9 +450,8 @@ body {
         left: 10px;
     }
     .logo-image {
-    margin: 2px 2px 2px 2px;
-}
-
+        margin: 2px 2px 2px 2px;
+    }
     .infobox {
         width: calc(100vw - 10px);
         left: 0;
