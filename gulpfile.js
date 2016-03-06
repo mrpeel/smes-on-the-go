@@ -22,7 +22,7 @@ gulp.task('default', ['serve'], function () {
 
 /* Build the appcache file. Updates the timestamp comment with the current date/time.  This is required to force a re-load of
     the cached files.
-*/
+
 gulp.task('appcachetimestamp', function () {
     gulp.src('src/smes-on-the-go.appcache')
         .pipe(replace({
@@ -52,11 +52,75 @@ gulp.task('appcachetimestamp', function () {
 
     .pipe(gulp.dest('build/'))
         .pipe(gulp.dest('dist/'));
+});*/
+
+/* Build the serviceworker js file for build directory. Updates the timestamp used in the cache name the current date/time.  
+ */
+gulp.task('buildserviceworker', function () {
+    gulp.src('src/sw.js')
+        .pipe(replace({
+            patterns: [
+                {
+                    match: 'timestamp',
+                    replacement: new Date().getTime()
+                    }
+                ]
+        }))
+        .pipe(replace({
+            patterns: [
+                {
+                    match: 'cssfile',
+                    replacement: 'smes-on-the-go.css'
+                    }
+                ]
+        }))
+        .pipe(replace({
+            patterns: [
+                {
+                    match: 'jsfile',
+                    replacement: 'smes-on-the-go.js'
+                    }
+                ]
+        }))
+
+    .pipe(gulp.dest('build/'));
+});
+
+/* Build the serviceworker js file for dist directory. Updates the timestamp used in the cache name the current date/time.  
+ */
+gulp.task('distserviceworker', ['buildserviceworker'], function () {
+    gulp.src('src/sw.js')
+        .pipe(replace({
+            patterns: [
+                {
+                    match: 'timestamp',
+                    replacement: new Date().getTime()
+                    }
+                ]
+        }))
+        .pipe(replace({
+            patterns: [
+                {
+                    match: 'cssfile',
+                    replacement: 'smes-on-the-go.min.css'
+                    }
+                ]
+        }))
+        .pipe(replace({
+            patterns: [
+                {
+                    match: 'jsfile',
+                    replacement: 'smes-on-the-go.min.js'
+                    }
+                ]
+        }))
+
+    .pipe(gulp.dest('dist/'));
 });
 
 /* Build the javascript - concatenates and minifies the files required to run.
  */
-gulp.task('buildjs', ['appcachetimestamp'], function () {
+gulp.task('buildjs', ['distserviceworker'], function () {
     gulp.src(['src/smes-mark-store.js', 'src/smes-map.js', 'src/smes.js'])
         .pipe(concat('smes-on-the-go.js'))
         .pipe(gulp.dest('build/'))

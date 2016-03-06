@@ -49,6 +49,7 @@ window.addEventListener('load', function (e) {
 
     setupMap();
 
+
     var markStoreOptions = {};
     markStoreOptions.loadMark = loadMark;
     markStoreOptions.finishedRetrieve = requestMarkInformation;
@@ -155,7 +156,7 @@ function setupMap() {
     }
 
     smesMap.setUpAutoComplete("location-search", "clear-search-div");
-
+    console.log("Map set-up: " + window.performance.now());
 
 
 }

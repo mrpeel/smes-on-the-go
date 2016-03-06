@@ -1,5 +1,6 @@
 <!DOCTYPE html>
-<html lang=en manifest="smes-on-the-go.appcache">
+<html lang=en>
+<!--manifest="smes-on-the-go.appcache">-->
 
 <head>
     <meta charset="utf-8">
@@ -36,11 +37,9 @@
     <meta name="msapplication-wide310x150logo" content="mstile-310x150.png" />
     <meta name="msapplication-square310x310logo" content="mstile-310x310.png" />
 
-
     <link href="https://fonts.googleapis.com/css?family=Roboto:regular,bold,italic,thin,light,bolditalic,black,medium&amp;lang=en" rel="stylesheet">
     <link href='https://fonts.googleapis.com/css?family=Muli' rel='stylesheet' type='text/css'>
     <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
-    <!--<link rel="stylesheet" href="https://storage.googleapis.com/code.getmdl.io/1.0.6/material.blue-pink.min.css" />-->
     <link rel="stylesheet" href="material.min.css" />
     <link rel="stylesheet" href="smes-on-the-go.min.css" />
 
@@ -179,9 +178,43 @@
 
     </div>
     <script>
+        function prepServiceWorker() {
+
+            if (!navigator.serviceWorker) {
+                return;
+            }
+
+            navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                if (!navigator.serviceWorker.controller) {
+                    return;
+                }
+
+                if (reg.waiting) {
+                    reg.waiting.postMessage({
+                        action: 'skipWaiting'
+                    });
+                    return;
+                }
+
+            });
+
+            // Ensure refresh is only called once.
+            // This works around a bug in "force update on reload".
+            var refreshing;
+            navigator.serviceWorker.addEventListener('controllerchange', function() {
+                if (refreshing) return;
+                window.location.reload();
+                refreshing = true;
+            });
+        }
+
+        prepServiceWorker();
+
+    </script>
+    <script>
         // Check if a new cache is available on page load - force a reload if it has.        
         window.addEventListener('load', function(e) {
-            window.applicationCache.addEventListener('updateready', function(e) {
+            /*window.applicationCache.addEventListener('updateready', function(e) {
                 if (window.applicationCache.status == window.applicationCache.UPDATEREADY) {
                     // Browser downloaded a new app cache.                    
                     window.location.reload();
@@ -194,7 +227,7 @@
                     if (window.applicationCache.status != window.applicationCache.UNCACHED)
                         window.applicationCache.update();
                 }
-            }, 4 * 60 * 60 * 1000);
+            }, 4 * 60 * 60 * 1000);*/
 
             //Check for iOS and re-set the viewport meta-tag to fix min and max scale - deals with iOS scaling issue 
             if (navigator.userAgent.match(/(iPad|iPhone|iPod)/gi)) {
@@ -209,17 +242,17 @@
         }, false);
 
     </script>
+
+    <script src="https://maps.google.com/maps/api/js?key=AIzaSyC2nLsr9KX6pMcwmYH-LY-JqVwByPmaTfM&libraries=places"></script>
     <script>
         // If Promise and/or fetch are not supported, include the polyfill
         window.Promise || document.write("<script src=Promise.min.js><\/script>");
         window.fetch || document.write("<script src=fetch.min.js><\/script>");
 
     </script>
-
-    <script src="material.min.js"></script>
-    <script src="https://maps.google.com/maps/api/js?key=AIzaSyC2nLsr9KX6pMcwmYH-LY-JqVwByPmaTfM&libraries=places"></script>
     <script src="sotg-lib.min.js"></script>
-    <script src="smes-on-the-go.min.js"></script>
+    <script src="smes-on-the-go.min.js" async defer></script>
+    <script src="material.min.js" async defer></script>
 
 </body>
 
