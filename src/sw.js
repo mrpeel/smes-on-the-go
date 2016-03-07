@@ -21,8 +21,7 @@ var preCache = [
                 'symbology/selected-scn-gda94-ahd-pm.png',
                 'symbology/selected-scn-gda94-ahdapprox-pm.png',
                 'symbology/selected-scn-gda94-pcm.png',
-                'symbology/selected-scn-gda94-pm.png',
-                'https://maps.google.com/maps/api/js?key=AIzaSyC2nLsr9KX6pMcwmYH-LY-JqVwByPmaTfM&libraries=places'
+                'symbology/selected-scn-gda94-pm.png'
             ];
 var opaqueCacheOnRequest = [
                 'https://fonts.gstatic.com',
@@ -79,7 +78,6 @@ function opaqueCacheOnFirstRequest(request) {
     /*Opaque URLs fail when attempting to work with the response object
        so for these URLs, if they are not already cached, they are added with a call to add
     */
-
     return caches.open(staticCacheName).then(function checkCache(cache) {
         cache.match(request).then(function (response) {
             if (!response) {

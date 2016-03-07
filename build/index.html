@@ -190,23 +190,45 @@
                 }
 
                 if (reg.waiting) {
-                    reg.waiting.postMessage({
-                        action: 'skipWaiting'
-                    });
+                    updateReady(reg.waiting);
                     return;
                 }
 
+                if (reg.installing) {
+                    trackInstalling(reg.installing);
+                    return;
+                }
+
+                reg.addEventListener('updatefound', function() {
+                    trackInstalling(reg.installing);
+                });
+
             });
 
-            // Ensure refresh is only called once.
-            // This works around a bug in "force update on reload".
+            // Ensure refresh is only called once (this works around a bug in "force update on reload").
             var refreshing;
-            navigator.serviceWorker.addEventListener('controllerchange', function() {
+            navigator.serviceWorker.addEventListener('statechange', function() {
                 if (refreshing) return;
+
                 window.location.reload();
                 refreshing = true;
             });
         }
+
+        function trackInstalling(worker) {
+            worker.addEventListener('statechange', function() {
+                if (worker.state == 'installed') {
+                    updateReady(worker);
+                }
+            });
+        };
+
+        function updateReady(worker) {
+            worker.postMessage({
+                action: 'skipWaiting'
+            });
+            window.location.reload();
+        };
 
         prepServiceWorker();
 
@@ -214,21 +236,6 @@
     <script>
         // Check if a new cache is available on page load - force a reload if it has.        
         window.addEventListener('load', function(e) {
-            /*window.applicationCache.addEventListener('updateready', function(e) {
-                if (window.applicationCache.status == window.applicationCache.UPDATEREADY) {
-                    // Browser downloaded a new app cache.                    
-                    window.location.reload();
-                }
-            }, false);
-
-            //Set-up periodic checking for updated - every 4 hours of app use
-            window.setInterval(function() {
-                if (navigator.onLine) {
-                    if (window.applicationCache.status != window.applicationCache.UNCACHED)
-                        window.applicationCache.update();
-                }
-            }, 4 * 60 * 60 * 1000);*/
-
             //Check for iOS and re-set the viewport meta-tag to fix min and max scale - deals with iOS scaling issue 
             if (navigator.userAgent.match(/(iPad|iPhone|iPod)/gi)) {
                 var metaTags = document.getElementsByTagName('meta');
@@ -248,7 +255,6 @@
         // If Promise and/or fetch are not supported, include the polyfill
         window.Promise || document.write("<script src=Promise.min.js><\/script>");
         window.fetch || document.write("<script src=fetch.min.js><\/script>");
-
     </script>
     <script src="sotg-lib.min.js"></script>
     <script src="smes-on-the-go.js" async defer></script>
