@@ -337,15 +337,15 @@ SMESMarkStore.prototype.retrieveMarkInformation = function (cLat, cLong, cRadius
 
     return new Promise(function (resolve, reject) {
 
-        console.log("Fetching: " + smesMarkStore.baseURL + "/getMarkInformation?searchType=Location&latitude=" + cLat + "&longitude=" + cLong + "&radius=" + cRadius + "&format=Full");
+        //console.log("Fetching: " + smesMarkStore.baseURL + "/getMarkInformation?searchType=Location&latitude=" + cLat + "&longitude=" + cLong + "&radius=" + cRadius + "&format=Full");
 
         fetch(smesMarkStore.baseURL + "/getMarkInformation?searchType=Location&latitude=" + cLat + "&longitude=" + cLong + "&radius=" + cRadius + "&format=Full", {
                 mode: 'cors'
             }).then(function (response) {
                 return response.json();
             }).then(function (jsonResponse) {
-                console.log("Response");
-                console.log(jsonResponse);
+                //console.log("Response");
+                //console.log(jsonResponse);
 
                 //Check for success - the messages element will not be present for success
                 if (typeof jsonResponse.messages === 'undefined') {
