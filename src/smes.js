@@ -51,7 +51,7 @@ window.addEventListener('load', function (e) {
 
     var markStoreOptions = {};
     markStoreOptions.loadMark = loadMark;
-    markStoreOptions.finishedRetrieve = requestMarkInformation;
+    markStoreOptions.finishedRetrieve = finishedRetrieveAndLoad;
 
 
     markStore = new SMESMarkStore(markStoreOptions);
@@ -170,6 +170,13 @@ function geoLocate() {
 
 }
 
+function finishedRetrieveAndLoad() {
+    //Make sure markers are now displayed
+    smesMap.refreshMarkers();
+    //Cal for fresh marker load from server
+    requestMarkInformation();
+}
+
 function requestMarkInformation() {
 
     if (startingUp) {
@@ -270,7 +277,7 @@ function displayZoomMessage(hasError) {
 
 }
 
-function loadMark(surveyMark, loadType) {
+function loadMark(surveyMark, loadType, loadHidden) {
     //Work through the new markers and add to the map, then work through updated markers and update on the map
     var preparedMark;
 
@@ -280,17 +287,11 @@ function loadMark(surveyMark, loadType) {
     preparedMark = prepMarkForMap(surveyMark);
 
     if (loadType === "new") {
-        smesMap.addMarker(preparedMark.marker);
-        smesMap.addLabel(preparedMark.label);
+        smesMap.addMarker(preparedMark.marker, loadHidden);
 
     } else {
 
         smesMap.updateMarker(preparedMark.marker);
-        smesMap.updateLabel(preparedMark.label);
-
-
-        smesMap.addMarker(preparedMark.marker);
-        smesMap.addLabel(preparedMark.label);
 
     }
 
@@ -301,7 +302,6 @@ function loadMark(surveyMark, loadType) {
 function prepMarkForMap(surveyMark) {
     var eventListeners = {};
     var marker = {};
-    var label = {};
     var navigateString, cardDiv;
 
     var closeButton = '<button id="close-info-box" class="close-button mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--icon">' +
@@ -391,14 +391,9 @@ function prepMarkForMap(surveyMark) {
     marker.infoWindowContent = infoWindowContent;
 
 
-    label.lat = surveyMark.latitude;
-    label.lng = surveyMark.longitude;
-    label.label = surveyMark.name;
-    label.nineFigureNo = surveyMark.nineFigureNumber;
 
     return ({
-        marker: marker,
-        label: label
+        marker: marker
     });
 }
 

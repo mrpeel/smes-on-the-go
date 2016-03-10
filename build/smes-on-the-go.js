@@ -52,7 +52,7 @@ SMESMarkStore.prototype.retrieveStoredMarks = function () {
 
         markKeys.forEach(function (nineFigureNumber) {
             if (smesMarkStore.markData[nineFigureNumber].lastUpdated > comparisonMSec) {
-                smesMarkStore.loadMark.apply(smesMarkStore, [smesMarkStore.markData[nineFigureNumber], "new"]);
+                smesMarkStore.loadMark.apply(smesMarkStore, [smesMarkStore.markData[nineFigureNumber], "new", true]);
             } else {
                 delete smesMarkStore.markData[nineFigureNumber];
             }
@@ -337,15 +337,15 @@ SMESMarkStore.prototype.retrieveMarkInformation = function (cLat, cLong, cRadius
 
     return new Promise(function (resolve, reject) {
 
-        console.log("Fetching: " + smesMarkStore.baseURL + "/getMarkInformation?searchType=Location&latitude=" + cLat + "&longitude=" + cLong + "&radius=" + cRadius + "&format=Full");
+        //console.log("Fetching: " + smesMarkStore.baseURL + "/getMarkInformation?searchType=Location&latitude=" + cLat + "&longitude=" + cLong + "&radius=" + cRadius + "&format=Full");
 
         fetch(smesMarkStore.baseURL + "/getMarkInformation?searchType=Location&latitude=" + cLat + "&longitude=" + cLong + "&radius=" + cRadius + "&format=Full", {
                 mode: 'cors'
             }).then(function (response) {
                 return response.json();
             }).then(function (jsonResponse) {
-                console.log("Response");
-                console.log(jsonResponse);
+                //console.log("Response");
+                //console.log(jsonResponse);
 
                 //Check for success - the messages element will not be present for success
                 if (typeof jsonResponse.messages === 'undefined') {
@@ -546,7 +546,8 @@ var SMESGMap = function (elementId, options) {
     smesGMap.markerIcons = [];
     smesGMap.markerSize = 10;
     smesGMap.pixelDensity = 1;
-    smesGMap.markersHidden = false;
+    smesGMap.markersVisible = true;
+    smesGMap.labelsVisible = false;
     //Special offsets for IOS and mobile safari
     smesGMap.pixelVerticalOffSet = options.pixelVerticalOffSet || 0;
     smesGMap.mobileSafari = options.mobileSafari || false;
@@ -591,7 +592,7 @@ var SMESGMap = function (elementId, options) {
 
 
     google.maps.event.addListener(smesGMap.map, 'idle', function () {
-        smesGMap.resizeIcons();
+        smesGMap.refreshMarkers();
         smesGMap.saveMapState();
     });
 
@@ -686,6 +687,10 @@ SMESGMap.prototype.saveMapState = function () {
     var mapCoords = smesGMap.getMapPosition();
 
     mapState.zoom = smesGMap.getZoom();
+    //Never save a zoom state greater than 18 - it complicates loading of labels
+    if (mapState.zoom > 18) {
+        mapState.zoom = 18;
+    }
     mapState.mapStyleName = smesGMap.mapStyleName;
     mapState.lat = mapCoords.lat;
     mapState.lng = mapCoords.lng;
@@ -750,12 +755,12 @@ SMESGMap.prototype.getZoom = function () {
  * @return {None}.
  */
 
-SMESGMap.prototype.addMarker = function (marker) {
+SMESGMap.prototype.addMarker = function (marker, loadHidden) {
     "use strict";
 
     //Capture local reference of map for use in click functions
     var smesGMap = this;
-    var markerLat, markerLng, markerTitle, markerIcon, nineFigureNo, infoWindowContent, eventListeners;
+    var markerLat, markerLng, markerTitle, markerIcon, nineFigureNo, infoWindowContent, eventListeners, mapReference;
 
     markerLat = marker.lat;
     markerLng = marker.lng;
@@ -765,6 +770,10 @@ SMESGMap.prototype.addMarker = function (marker) {
     infoWindowContent = marker.infoWindowContent;
     eventListeners = marker.eventListeners || null;
 
+    //Check whether marker should be visible on the map or not, only set the mapReference if markers are being displayed
+    if (smesGMap.markersVisible && !loadHidden) {
+        mapReference = smesGMap.map;
+    }
 
     var icon = {
         url: markerIcon + ".png",
@@ -776,7 +785,7 @@ SMESGMap.prototype.addMarker = function (marker) {
     var mapMarker = new google.maps.Marker({
         position: new google.maps.LatLng(markerLat, markerLng),
         title: markerTitle,
-        map: smesGMap.map,
+        map: mapReference,
         draggable: false,
         icon: icon,
         animation: google.maps.Animation.DROP,
@@ -822,11 +831,15 @@ SMESGMap.prototype.addMarker = function (marker) {
 
     smesGMap.markers.push(mapMarker);
 
-    //Check whether marker should be visible or not
-    if (smesGMap.markersHidden) {
-        mapMarker.setMap(null);
+    //If labels are being displayed, add the label as well
+    if (smesGMap.labelsVisible) {
+        //Create label and add to nmap
+        var label = {};
+        label.position = mapMarker.position;
+        label.label = mapMarker.title;
+        label.nineFigureNo = mapMarker.nineFigureNo;
+        smesGMap.addLabel(label);
     }
-
 
 };
 
@@ -936,25 +949,18 @@ SMESGMap.prototype.addLabel = function (label) {
     "use strict";
 
     var smesGMap = this;
-    var labelContent, nineFigureNo, labelLat, labelLng;
-
-    labelLat = label.lat;
-    labelLng = label.lng;
-    labelContent = label.label;
-    nineFigureNo = label.nineFigureNo;
 
     var mapLabel = new MapLabel({
-        text: labelContent,
-        position: new google.maps.LatLng(labelLat, labelLng),
+        text: label.label,
+        position: label.position,
         map: smesGMap.map,
-        minZoom: 19,
-        fontFamily: "'Muli', sans-serif",
-        strokeWeight: 6,
-        fontColor: 'rgba(28, 43, 139, 0.87)',
-        strokeColor: 'rgba(245, 245, 245, 0.87)',
+        fontFamily: "'Roboto', 'Helvetica', sans-serif",
+        strokeWeight: 2,
+        fontColor: '#2e70ba',
+        strokeColor: '#FFF',
         fontSize: 12,
         align: 'center',
-        nineFigureNo: nineFigureNo
+        nineFigureNo: label.nineFigureNo
     });
 
     smesGMap.labels.push(mapLabel);
@@ -962,32 +968,6 @@ SMESGMap.prototype.addLabel = function (label) {
 
 };
 
-SMESGMap.prototype.updateLabel = function (label) {
-    "use strict";
-
-    var smesGMap = this;
-    var labelContent, nineFigureNo, labelLat, labelLng;
-    var mapLabel;
-
-    labelLat = label.lat;
-    labelLng = label.lng;
-    labelContent = label.label;
-    nineFigureNo = label.nineFigureNo;
-
-    for (var i = 0; i < smesGMap.labels.length; i++) {
-        if (smesGMap.labels[i].nineFigureNo === nineFigureNo) {
-            mapLabel = smesGMap.labels[i];
-            break;
-        }
-    }
-
-    //If a marker was found and defined continue processing
-    if (mapLabel) {
-        mapLabel.set("text", labelContent);
-        mapLabel.set("position", new google.maps.LatLng(labelLat, labelLng));
-    }
-
-};
 
 SMESGMap.prototype.setZoomLevel = function () {
     "use strict";
@@ -995,22 +975,18 @@ SMESGMap.prototype.setZoomLevel = function () {
     var smesGMap = this;
     var zoomLevel = smesGMap.map.getZoom();
 
-    //If zoom level has changed, depending on old and new zoom levels marks need to be shown or hidden
-    if (!smesGMap.zoomLevel || smesGMap.zoomLevel !== zoomLevel) {
-
-        if (zoomLevel < 14 && (!smesGMap.zoomLevel || smesGMap.zoomLevel >= 14)) {
-            smesGMap.hideMarkers();
-            smesGMap.markersHidden = true;
-        } else if (zoomLevel >= 14 && (!smesGMap.zoomLevel || smesGMap.zoomLevel < 14)) {
-            smesGMap.showMarkers();
-        }
-
-        if (zoomLevel >= 14) {
-            smesGMap.markerResizeRequired = true;
-            smesGMap.markersHidden = false;
-        }
-
+    if (zoomLevel < 14) {
+        smesGMap.markersVisible = false;
+    } else if (zoomLevel >= 14) {
+        smesGMap.markersVisible = true;
     }
+
+    if (zoomLevel >= 19) {
+        smesGMap.labelsVisible = true;
+    } else {
+        smesGMap.labelsVisible = false;
+    }
+
 
     //Reset zoomLevel
     smesGMap.zoomLevel = smesGMap.map.getZoom();
@@ -1018,81 +994,77 @@ SMESGMap.prototype.setZoomLevel = function () {
 
 };
 
-SMESGMap.prototype.resizeIcons = function () {
+
+SMESGMap.prototype.clearLabels = function () {
     "use strict";
 
-    var icon, newSize;
     var smesGMap = this;
 
-    //Loop through the markers and re-szie their icons
-    for (var markerCounter = 0; markerCounter < smesGMap.markers.length || 0; markerCounter++) {
-        //Retrieve the marker icon and re-set its size
-        icon = smesGMap.markers[markerCounter].icon;
-        newSize = smesGMap.markerSize || 14;
+    //Disconnect labels from the map
+    for (var i = 0; i < smesGMap.labels.length; i++) {
+        smesGMap.labels[i].setMap(null);
+    }
 
-        if (smesGMap.markers[markerCounter].isSelected) {
-            newSize = newSize * 2;
+    //Truncate the labels array
+    smesGMap.labels.length = 0;
+};
+
+
+SMESGMap.prototype.refreshMarkers = function () {
+    "use strict";
+
+    var icon, newSize, position;
+    var smesGMap = this;
+    var bounds = smesGMap.map.getBounds();
+
+    //Start by clearing all labels
+    smesGMap.clearLabels();
+
+    //Loop through the markers
+    for (var markerCounter = 0; markerCounter < smesGMap.markers.length || 0; markerCounter++) {
+        position = smesGMap.markers[markerCounter].position;
+
+        //Check if all markers are hidden or markers is outside current viewport
+        if (!smesGMap.markersVisible || !bounds.contains(position)) {
+            //No need to display marker
+            smesGMap.markers[markerCounter].setMap(null);
+        } else {
+            //Retrieve the marker icon and re-set its size
+            icon = smesGMap.markers[markerCounter].icon;
+            newSize = smesGMap.markerSize || 14;
+
+            if (smesGMap.markers[markerCounter].isSelected) {
+                newSize = newSize * 2;
+            }
+
+            //Check if marker icon size has changed
+            if (newSize != icon.size.width) {
+                icon.scaledSize = new google.maps.Size(newSize, newSize);
+                icon.size = new google.maps.Size(newSize * smesGMap.pixelDensity, newSize * smesGMap.pixelDensity);
+
+                //Update icon
+                smesGMap.markers[markerCounter].setIcon(icon);
+            }
+
+            //Make sure markers is being displayed on the map
+            if (!smesGMap.markers[markerCounter].map) {
+                smesGMap.markers[markerCounter].setMap(smesGMap.map);
+            }
+
+            //Check whether the labels are being displayed, if so add to map
+            if (smesGMap.labelsVisible) {
+                //Create label and add to nmap
+                var label = {};
+                label.position = position;
+                label.label = smesGMap.markers[markerCounter].title;
+                label.nineFigureNo = smesGMap.markers[markerCounter].nineFigureNo;
+                smesGMap.addLabel(label);
+            }
         }
 
-        icon.scaledSize = new google.maps.Size(newSize, newSize);
-        icon.size = new google.maps.Size(newSize * smesGMap.pixelDensity, newSize * smesGMap.pixelDensity);
-
-        //Update icon
-        smesGMap.markers[markerCounter].setIcon(icon);
     }
 
 };
-
-
-
-
-SMESGMap.prototype.hideMarkers = function () {
-    "use strict";
-
-    var smesGMap = this;
-
-    for (var i = 0; i < smesGMap.markers.length; i++) {
-        smesGMap.markers[i].setMap(null);
-    }
-
-};
-
-SMESGMap.prototype.showMarkers = function () {
-    "use strict";
-
-    var smesGMap = this;
-
-    for (var i = 0; i < smesGMap.markers.length; i++) {
-        smesGMap.markers[i].setMap(smesGMap.map);
-    }
-
-};
-
-
-SMESGMap.prototype.hideLabels = function () {
-    "use strict";
-
-    var smesGMap = this;
-
-    for (var i = 0; i < smesGMap.labels.length; i++) {
-        smesGMap.labels[i].set('map', 'null');
-    }
-
-
-};
-
-SMESGMap.prototype.showLabels = function () {
-    "use strict";
-
-    var smesGMap = this;
-
-    for (var i = 0; i < smesGMap.labels.length; i++) {
-        smesGMap.labels[i].set('map', smesGMap.map);
-    }
-
-};
-
-
 
 SMESGMap.prototype.reverseGeocode = function (cLat, cLng) {
     "use strict";
@@ -2128,7 +2100,7 @@ window.addEventListener('load', function (e) {
 
     var markStoreOptions = {};
     markStoreOptions.loadMark = loadMark;
-    markStoreOptions.finishedRetrieve = requestMarkInformation;
+    markStoreOptions.finishedRetrieve = finishedRetrieveAndLoad;
 
 
     markStore = new SMESMarkStore(markStoreOptions);
@@ -2247,6 +2219,13 @@ function geoLocate() {
 
 }
 
+function finishedRetrieveAndLoad() {
+    //Make sure markers are now displayed
+    smesMap.refreshMarkers();
+    //Cal for fresh marker load from server
+    requestMarkInformation();
+}
+
 function requestMarkInformation() {
 
     if (startingUp) {
@@ -2347,7 +2326,7 @@ function displayZoomMessage(hasError) {
 
 }
 
-function loadMark(surveyMark, loadType) {
+function loadMark(surveyMark, loadType, loadHidden) {
     //Work through the new markers and add to the map, then work through updated markers and update on the map
     var preparedMark;
 
@@ -2357,17 +2336,11 @@ function loadMark(surveyMark, loadType) {
     preparedMark = prepMarkForMap(surveyMark);
 
     if (loadType === "new") {
-        smesMap.addMarker(preparedMark.marker);
-        smesMap.addLabel(preparedMark.label);
+        smesMap.addMarker(preparedMark.marker, loadHidden);
 
     } else {
 
         smesMap.updateMarker(preparedMark.marker);
-        smesMap.updateLabel(preparedMark.label);
-
-
-        smesMap.addMarker(preparedMark.marker);
-        smesMap.addLabel(preparedMark.label);
 
     }
 
@@ -2378,7 +2351,6 @@ function loadMark(surveyMark, loadType) {
 function prepMarkForMap(surveyMark) {
     var eventListeners = {};
     var marker = {};
-    var label = {};
     var navigateString, cardDiv;
 
     var closeButton = '<button id="close-info-box" class="close-button mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--icon">' +
@@ -2468,14 +2440,9 @@ function prepMarkForMap(surveyMark) {
     marker.infoWindowContent = infoWindowContent;
 
 
-    label.lat = surveyMark.latitude;
-    label.lng = surveyMark.longitude;
-    label.label = surveyMark.name;
-    label.nineFigureNo = surveyMark.nineFigureNumber;
 
     return ({
-        marker: marker,
-        label: label
+        marker: marker
     });
 }
 
