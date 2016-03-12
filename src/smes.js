@@ -129,7 +129,12 @@ function setupMap() {
 
     //Set the negative vertical offset required for iOS
     if (mobileOS.indexOf("iOS") === 0) {
-        mapOptions.pixelVerticalOffSet = -20 * 3 / window.devicePixelRatio;
+        if (window.devicePixelRatio == 2) {
+            mapOptions.pixelVerticalOffSet = -28;
+        } else if (window.devicePixelRatio == 3) {
+            mapOptions.pixelVerticalOffSet = -54;
+        }
+
         if (mobileOS === "iOSSafari") {
             mapOptions.mobileSafari = true;
         }
@@ -148,9 +153,9 @@ function setupMap() {
         });
     }
 
-    //Set double pixel densi=ty for iOS
+    //Set  pixel density for iOS
     if (mobileOS.indexOf("iOS") === 0) {
-        smesMap.pixelDensity = 2;
+        smesMap.pixelDensity = window.devicePixelRatio;
 
     }
 

@@ -50,16 +50,11 @@ var SMESGMap = function (elementId, options) {
 
     smesGMap.markers = [];
     smesGMap.labels = [];
-    smesGMap.currentZoom = 1;
     smesGMap.markerIcons = [];
-    smesGMap.markerSize = 10;
     smesGMap.pixelDensity = 1;
-    smesGMap.markersVisible = true;
-    smesGMap.labelsVisible = false;
     //Special offsets for IOS and mobile safari
     smesGMap.pixelVerticalOffSet = options.pixelVerticalOffSet || 0;
     smesGMap.mobileSafari = options.mobileSafari || false;
-
 
     smesGMap.map = new google.maps.Map(document.getElementById(elementId), smesGMap.mapOptions);
     smesGMap.geocoder = new google.maps.Geocoder();
@@ -70,15 +65,12 @@ var SMESGMap = function (elementId, options) {
         maxWidth: 440,
         pixelOffset: new google.maps.Size(-220, smesGMap.pixelVerticalOffSet),
         zIndex: 25,
-        /*boxStyle: {
-            background: "url('http://google-maps-utility-library-v3.googlecode.com/svn/trunk/infobox/examples/tipbox.gif') no - repeat",
-            opacity: 0.75 //,
-                //width: "280px"
-        },*/
         closeBoxURL: "",
         infoBoxClearance: new google.maps.Size(4, 4)
     });
 
+    //Set-up the correct zoom level and icon size
+    smesGMap.setZoomLevel();
 
     google.maps.event.addListener(smesGMap.map, 'zoom_changed', function () {
         smesGMap.checkSizeofMap();

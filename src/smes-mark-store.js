@@ -178,6 +178,8 @@ SMESMarkStore.prototype.requestMarkInformation = function (requestOptions) {
 
     //If an unacceptable radius has been supplied, don't call the service
     if (requestOptions.cRadius > 2) {
+        console.log("Unacceptable radius value: " + requestOptions.cRadius);
+        requestOptions.errorCallback.apply(smesMarkStore);
         return;
     }
 
