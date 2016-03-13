@@ -129,8 +129,6 @@ var SMESGMap = function (elementId, options) {
     });
 
 
-    //Attempt oto move map to current user coordinates
-    //smesGMap.geoLocate();
     //Make sure infobox is correct size
     smesGMap.resizeInfoBox();
 
@@ -689,8 +687,9 @@ SMESGMap.prototype.checkSizeofMap = function () {
 
     var smesGMap = this;
 
-    var mapBoundsSouthWest = smesGMap.map.getBounds().getSouthWest();
     var mapCenter = smesGMap.map.getCenter();
+    var mapBoundsSouthWest = smesGMap.map.getBounds().getSouthWest();
+
 
     if (typeof mapBoundsSouthWest !== 'undefined' && typeof mapCenter !== 'undefined') {
         var mapRadius = smesGMap.getDistanceKms(mapCenter.lat(), mapCenter.lng(), mapBoundsSouthWest.lat(), mapBoundsSouthWest.lng());
