@@ -52,7 +52,7 @@ SMESMarkStore.prototype.retrieveStoredMarks = function () {
 
         markKeys.forEach(function (nineFigureNumber) {
             if (smesMarkStore.markData[nineFigureNumber].lastUpdated > comparisonMSec) {
-                smesMarkStore.loadMark.apply(smesMarkStore, [smesMarkStore.markData[nineFigureNumber], "new"]);
+                smesMarkStore.loadMark.apply(smesMarkStore, [smesMarkStore.markData[nineFigureNumber], "new", true]);
             } else {
                 delete smesMarkStore.markData[nineFigureNumber];
             }
@@ -178,6 +178,8 @@ SMESMarkStore.prototype.requestMarkInformation = function (requestOptions) {
 
     //If an unacceptable radius has been supplied, don't call the service
     if (requestOptions.cRadius > 2) {
+        console.log("Unacceptable radius value: " + requestOptions.cRadius);
+        requestOptions.errorCallback.apply(smesMarkStore);
         return;
     }
 
