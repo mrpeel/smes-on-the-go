@@ -147,9 +147,9 @@ body {
     width: 40px;
 }
 
-/* Zoom message */
+/* Update message */
 
-.zoom-in-message {
+.update-message {
     position: absolute;
     bottom: 30px;
     left: 10px;
@@ -163,12 +163,14 @@ body {
     padding-top: 14px;
     padding-bottom: 14px;
     text-align: center;
-    display: none;
 }
-.zoom-in-message-text {
+.update-message-text {
     font-size: 14px;
     font-weight: 300;
     color: rgba(255, 255, 255, 1);
+}
+.update-countdown-value {
+    margin-left: 10px;
 }
 
 /* Connection Icon and Tooltip */

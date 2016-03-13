@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang=en>
-<!--manifest="smes-on-the-go.appcache">-->
 
 <head>
     <meta charset="utf-8">
@@ -139,6 +138,9 @@
                 </div>
             </div>
         </main>
+        <div id="update-message" class="update-message hidden">
+            <div class="update-message-text"><span>SMES On The Go is about to update ...</span><span id="count-down-value" class="update-countdown-value"></span></div>
+        </div>
 
         <div id="screen-overlay" class="screen-overlay hidden">
             <div class="mdl-card about-box mdl-shadow--3dp overflow-x-visible">
@@ -177,62 +179,6 @@
 
 
     </div>
-    <script>
-        function prepServiceWorker() {
-
-            if (!navigator.serviceWorker) {
-                return;
-            }
-
-            navigator.serviceWorker.register('/sw.js').then(function(reg) {
-                if (!navigator.serviceWorker.controller) {
-                    return;
-                }
-
-                if (reg.waiting) {
-                    updateReady(reg.waiting);
-                    return;
-                }
-
-                if (reg.installing) {
-                    trackInstalling(reg.installing);
-                    return;
-                }
-
-                reg.addEventListener('updatefound', function() {
-                    trackInstalling(reg.installing);
-                });
-
-            });
-
-            // Ensure refresh is only called once (this works around a bug in "force update on reload").
-            var refreshing;
-            navigator.serviceWorker.addEventListener('statechange', function() {
-                if (refreshing) return;
-
-                window.location.reload();
-                refreshing = true;
-            });
-        }
-
-        function trackInstalling(worker) {
-            worker.addEventListener('statechange', function() {
-                if (worker.state == 'installed') {
-                    updateReady(worker);
-                }
-            });
-        };
-
-        function updateReady(worker) {
-            worker.postMessage({
-                action: 'skipWaiting'
-            });
-            window.location.reload();
-        };
-
-        prepServiceWorker();
-
-    </script>
     <script>
         // Check if a new cache is available on page load - force a reload if it has.        
         window.addEventListener('load', function(e) {

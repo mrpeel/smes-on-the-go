@@ -129,8 +129,6 @@ var SMESGMap = function (elementId, options) {
     });
 
 
-    //Attempt oto move map to current user coordinates
-    //smesGMap.geoLocate();
     //Make sure infobox is correct size
     smesGMap.resizeInfoBox();
 

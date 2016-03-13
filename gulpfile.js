@@ -10,7 +10,7 @@ var connect = require('gulp-connect');
 var gutil = require('gulp-util');
 var ghPages = require('gulp-gh-pages');
 var debug = require('gulp-debug');
-
+var htmlmin = require('gulp-htmlmin');
 
 /* Use a dependency chain to build in the correct order - starting with the final task.
     Each task has the dependcy of the previous task listed
@@ -19,40 +19,6 @@ gulp.task('default', ['serve'], function () {
 
 });
 
-
-/* Build the appcache file. Updates the timestamp comment with the current date/time.  This is required to force a re-load of
-    the cached files.
-
-gulp.task('appcachetimestamp', function () {
-    gulp.src('src/smes-on-the-go.appcache')
-        .pipe(replace({
-            patterns: [
-                {
-                    match: 'timestamp',
-                    replacement: new Date().getTime()
-                    }
-                ]
-        }))
-        .pipe(replace({
-            patterns: [
-                {
-                    match: 'cssfile',
-                    replacement: 'smes-on-the-go.min.css'
-                    }
-                ]
-        }))
-        .pipe(replace({
-            patterns: [
-                {
-                    match: 'jsfile',
-                    replacement: 'smes-on-the-go.min.js'
-                    }
-                ]
-        }))
-
-    .pipe(gulp.dest('build/'))
-        .pipe(gulp.dest('dist/'));
-});*/
 
 /* Build the serviceworker js file for build directory. Updates the timestamp used in the cache name the current date/time.  
  */
@@ -162,6 +128,9 @@ gulp.task('buildhtml', ['minifycss'], function () {
                     }
                 ]
         }))
+        .pipe(htmlmin({
+            collapseWhitespace: false
+        }))
         .pipe(rename('index.html'))
         .pipe(gulp.dest('build/'));
 });
@@ -185,6 +154,9 @@ gulp.task('disthtml', ['buildhtml'], function () {
                     replacement: 'smes-on-the-go.min.js'
                     }
                 ]
+        }))
+        .pipe(htmlmin({
+            collapseWhitespace: true
         }))
         .pipe(rename('index.html'))
         .pipe(gulp.dest('dist/'));

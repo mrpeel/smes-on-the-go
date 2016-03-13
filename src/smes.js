@@ -27,6 +27,73 @@ vicExtents.maxLat = -33.43769367843318;
 vicExtents.minLng = 140.64925642150877;
 vicExtents.maxLng = 152.03658552307127;
 
+//Set-up the service worker
+function prepServiceWorker() {
+
+    if (!navigator.serviceWorker) {
+        return;
+    }
+
+    navigator.serviceWorker.register('/sw.js').then(function (reg) {
+        if (!navigator.serviceWorker.controller) {
+            return;
+        }
+
+        if (reg.waiting) {
+            updateReady(reg.waiting);
+            return;
+        }
+
+        if (reg.installing) {
+            trackInstalling(reg.installing);
+            return;
+        }
+
+        reg.addEventListener('updatefound', function () {
+            trackInstalling(reg.installing);
+        });
+    });
+
+    // Ensure refresh is only called once (works around a bug in "force update on reload").
+    var refreshing;
+    navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (refreshing) {
+            return;
+        }
+        window.location.reload();
+        refreshing = true;
+    });
+}
+//Execute the servide worker prep
+prepServiceWorker();
+
+function trackInstalling(worker) {
+    worker.addEventListener('statechange', function () {
+        if (worker.state == 'installed') {
+            updateReady(worker);
+        }
+    });
+}
+
+function updateReady(worker) {
+    var countdownDiv = document.getElementById("update-message");
+    var countdownValue = document.getElementById("count-down-value");
+    var cdVals = [5, 4, 3, 2, 1];
+
+    countdownDiv.classList.remove("hidden");
+
+    window.setTimeout(function () {
+        worker.postMessage({
+            action: 'skipWaiting'
+        });
+    }, 5000);
+
+    cdVals.forEach(function (val) {
+        window.setTimeout(function () {
+            countdownValue.innerText = val;
+        }, (5 - val) * 1000);
+    });
+}
 
 window.addEventListener('load', function (e) {
     //Set variable to bypass initial load when map is getting set
