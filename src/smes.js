@@ -12,6 +12,7 @@ var mobileOS;
 var elTimer;
 var overlayEl;
 
+//Variables for map and markers
 var smesMap;
 var markStore;
 var scnAHDValues = ["ZEROTH ORDER", "2ND ORDER", "3RD ORDER", "SPIRIT LEVELLING"];
@@ -34,7 +35,7 @@ function prepServiceWorker() {
         return;
     }
 
-    navigator.serviceWorker.register('/sw.js').then(function (reg) {
+    navigator.serviceWorker.register('sw.js').then(function (reg) {
         if (!navigator.serviceWorker.controller) {
             return;
         }
@@ -265,7 +266,7 @@ function requestMarkInformation() {
 
     showLoader();
 
-    console.log("requestMarkInformation");
+    console.log("requestMarkInformation, radius: " + radius);
 
 
     requestOptions = {};

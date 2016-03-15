@@ -567,7 +567,6 @@ var SMESGMap = function (elementId, options) {
     smesGMap.setZoomLevel();
 
     google.maps.event.addListener(smesGMap.map, 'zoom_changed', function () {
-        smesGMap.checkSizeofMap();
         smesGMap.setZoomLevel();
     });
 
@@ -586,6 +585,7 @@ var SMESGMap = function (elementId, options) {
 
 
     google.maps.event.addListener(smesGMap.map, 'idle', function () {
+        smesGMap.checkSizeofMap();
         smesGMap.refreshMarkers();
         smesGMap.saveMapState();
     });
@@ -946,11 +946,11 @@ SMESGMap.prototype.addLabel = function (label) {
         text: label.label,
         position: label.position,
         map: smesGMap.map,
-        fontFamily: "'Roboto', 'Helvetica', sans-serif",
+        fontFamily: "Sans-Serif", //'Roboto', 'Helvetica', sans-serif",
         strokeWeight: 2,
-        fontColor: '#2e70ba',
+        fontColor: '#193e69',
         strokeColor: '#FFF',
-        fontSize: 12,
+        fontSize: 13,
         align: 'center',
         nineFigureNo: label.nineFigureNo
     });
@@ -1138,19 +1138,11 @@ SMESGMap.prototype.setUpAutoComplete = function (elementId, clearButtonId) {
         if (place.geometry.viewport) {
             smesGMap.map.fitBounds(place.geometry.viewport);
         } else {
-            smesGMap.map.setCenter(place.geometry.location);
             smesGMap.map.setZoom(17); // Why 17? Because it will likely be close enough to load marks.
+            smesGMap.map.setCenter(place.geometry.location);
         }
 
         //Add map icon
-        //searchMarker.setIcon( /** @type {google.maps.Icon} */ 
-        /*({
-            url: place.icon,
-            size: new google.maps.Size(71, 71),
-            origin: new google.maps.Point(0, 0),
-            anchor: new google.maps.Point(17, 34),
-            scaledSize: new google.maps.Size(35, 35)
-        }));*/
         searchMarker.setPosition(place.geometry.location);
         searchMarker.setVisible(true);
 
@@ -2039,7 +2031,6 @@ SMESGMap.prototype.setupMapStyles = function () {
     };
 
 };
-
 /*global xr, SMESGMap, SMESMarkStore, Promise, setTimeout, window, document, console, alert, ArrayBuffer, Uint8Array, Blob, saveAs, darkGrey, coolGrey, paleDawn, shiftWorker, simpleLight, muted, iovation, navigator, google, SMESMap, MarkStore, componentHandler */
 
 
@@ -2054,6 +2045,7 @@ var mobileOS;
 var elTimer;
 var overlayEl;
 
+//Variables for map and markers
 var smesMap;
 var markStore;
 var scnAHDValues = ["ZEROTH ORDER", "2ND ORDER", "3RD ORDER", "SPIRIT LEVELLING"];
@@ -2076,7 +2068,7 @@ function prepServiceWorker() {
         return;
     }
 
-    navigator.serviceWorker.register('/sw.js').then(function (reg) {
+    navigator.serviceWorker.register('sw.js').then(function (reg) {
         if (!navigator.serviceWorker.controller) {
             return;
         }
@@ -2307,7 +2299,7 @@ function requestMarkInformation() {
 
     showLoader();
 
-    console.log("requestMarkInformation");
+    console.log("requestMarkInformation, radius: " + radius);
 
 
     requestOptions = {};
