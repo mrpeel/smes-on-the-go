@@ -548,7 +548,7 @@ var SMESGMap = function (elementId, options) {
     smesGMap.pixelDensity = 1;
     //Special offsets for IOS and mobile safari
     smesGMap.pixelVerticalOffSet = options.pixelVerticalOffSet || 0;
-    smesGMap.mobileSafari = options.mobileSafari || false;
+    smesGMap.mobile = options.mobile || false;
 
     smesGMap.map = new google.maps.Map(document.getElementById(elementId), smesGMap.mapOptions);
     smesGMap.geocoder = new google.maps.Geocoder();
@@ -797,12 +797,16 @@ SMESGMap.prototype.addMarker = function (marker, loadHidden) {
         smesGMap.infoBox.setVisible(true);
         smesGMap.map.panTo(mapMarker.position);
 
-        //Mobile safari needs extra panning to account for their shitty, idiotic  nav bar at the bottom of the viewport
-        if (smesGMap.mobileSafari) {
+        //Mobile apps need extra panning - safari needs extra panning to account for their shitty, idiotic  nav bar at the bottom of the viewport
+        if (smesGMap.mobile !== "") {
+            var pixelPan = 10;
+
+            if (smesGMap.mobile === "iOSSafari") {
+                pixelPan = 25 * 4 / window.devicePixelRatio;
+            }
             window.setTimeout(function () {
-                var pixelPan = 25 * 3 / window.devicePixelRatio;
                 smesGMap.map.panBy(0, pixelPan);
-            }, 0);
+            }, 10);
         }
 
 
@@ -2031,6 +2035,7 @@ SMESGMap.prototype.setupMapStyles = function () {
     };
 
 };
+
 /*global xr, SMESGMap, SMESMarkStore, Promise, setTimeout, window, document, console, alert, ArrayBuffer, Uint8Array, Blob, saveAs, darkGrey, coolGrey, paleDawn, shiftWorker, simpleLight, muted, iovation, navigator, google, SMESMap, MarkStore, componentHandler */
 
 
@@ -2229,6 +2234,11 @@ function setupMap() {
 
     mapOptions.pixelVerticalOffSet = 0;
 
+
+    if (mobileOS !== "") {
+        mapOptions.mobile = mobileOS;
+    }
+
     //Set the negative vertical offset required for iOS
     if (mobileOS.indexOf("iOS") === 0) {
         if (window.devicePixelRatio == 2) {
@@ -2237,9 +2247,6 @@ function setupMap() {
             mapOptions.pixelVerticalOffSet = -54;
         }
 
-        if (mobileOS === "iOSSafari") {
-            mapOptions.mobileSafari = true;
-        }
     }
 
     mapOptions.idle = requestMarkInformation;

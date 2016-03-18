@@ -196,6 +196,11 @@ function setupMap() {
 
     mapOptions.pixelVerticalOffSet = 0;
 
+
+    if (mobileOS !== "") {
+        mapOptions.mobile = mobileOS;
+    }
+
     //Set the negative vertical offset required for iOS
     if (mobileOS.indexOf("iOS") === 0) {
         if (window.devicePixelRatio == 2) {
@@ -204,9 +209,6 @@ function setupMap() {
             mapOptions.pixelVerticalOffSet = -54;
         }
 
-        if (mobileOS === "iOSSafari") {
-            mapOptions.mobileSafari = true;
-        }
     }
 
     mapOptions.idle = requestMarkInformation;
