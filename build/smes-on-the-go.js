@@ -296,6 +296,53 @@ SMESMarkStore.prototype.processRetrievedMarks = function (retrievedData) {
     });
 };
 
+SMESMarkStore.prototype.findNineFigureNumber = function (nineFigureNumber) {
+    "use strict";
+
+    var smesMarkStore = this;
+    var coords = {};
+
+    return new Promise(function (resolve, reject) {
+        //Check that the input value is a nine figure number
+        if (nineFigureNumber.length === 9 && nineFigureNumber % 1 === 0) {
+
+            //Check if this mark has already been stored
+            if (smesMarkStore.markData[nineFigureNumber]) {
+                coords.lat = smesMarkStore.markData[nineFigureNumber].latitude;
+                coords.lng = smesMarkStore.markData[nineFigureNumber].longitude;
+                resolve(coords);
+            } else {
+                //Mark was not found in local store - call service to check for it
+                console.log("Processing nineFigureNumber request");
+                smesMarkStore.lastSuccesfullRetrieve = new Date();
+                smesMarkStore.retrieveMarkByNineFigure(nineFigureNumber).then(function (marksRetrieved) {
+                    //Check data element is present, if so process it, and run the callback function
+                    if (marksRetrieved) {
+                        smesMarkStore.processRetrievedMarks(marksRetrieved).then(function () {
+                            console.log("Executing callback");
+                            smesMarkStore.tooManyMarks = false;
+                            coords.lat = smesMarkStore.markData[nineFigureNumber].latitude;
+                            coords.lng = smesMarkStore.markData[nineFigureNumber].longitude;
+                            resolve(coords);
+                        });
+
+                    } else {
+                        //If nothing was retrieved, the return false
+                        reject("Not found");
+                    }
+                }).catch(function (err) {
+                    //On error return false
+                    reject("Not found");
+                });
+
+
+            }
+        } else {
+            reject("Not a Nine Figure NUmber");
+        }
+    });
+};
+
 
 SMESMarkStore.prototype.setAddress = function (nineFigureNumber, address) {
     "use strict";
@@ -342,6 +389,65 @@ SMESMarkStore.prototype.retrieveMarkInformation = function (cLat, cLong, cRadius
         //console.log("Fetching: " + smesMarkStore.baseURL + "/getMarkInformation?searchType=Location&latitude=" + cLat + "&longitude=" + cLong + "&radius=" + cRadius + "&format=Full");
 
         fetch(smesMarkStore.baseURL + "/getMarkInformation?searchType=Location&latitude=" + cLat + "&longitude=" + cLong + "&radius=" + cRadius + "&format=Full", {
+                mode: 'cors'
+            }).then(function (response) {
+                return response.json();
+            }).then(function (jsonResponse) {
+                //console.log("Response");
+                //console.log(jsonResponse);
+
+                //Check for success - the messages element will not be present for success
+                if (typeof jsonResponse.messages === 'undefined') {
+                    //Results returned
+                    resolve(jsonResponse.data);
+                } else {
+                    //Error returned
+                    //Check for too many marks
+                    if (jsonResponse.messages.message === "More than 250 marks were found for this search. Please refine your search criteria.") {
+                        //Add message that the area has too many marks
+                        console.log("Too many marks");
+                        reject("Too many marks");
+
+                    } else if (jsonResponse.messages.message === "No survey marks matched the criteria provided.") {
+                        //Check for no marks
+                        console.log("No marks found");
+                        resolve([]);
+                    } else {
+                        //another message returned, log it
+                        console.log(jsonResponse.messages.message);
+                        reject("Webservice error");
+                    }
+                }
+
+            })
+            .catch(function (err) {
+                console.log(err);
+                //if (xr.status === 0 && xr.response === "") {
+                smesMarkStore.delayNextRequest();
+                console.log("Too many requests");
+                //}
+                reject(err);
+            });
+    });
+
+};
+
+
+/**
+ * Call the getMarkInfornmation web service.  
+ * @param {number} nineFigureNumber - the nine figure number to search for
+ * @return {promise} a promise which will resolve a data structure which contains the mark information 
+ */
+SMESMarkStore.prototype.retrieveMarkByNineFigure = function (nineFigureNumber) {
+    "use strict";
+
+    var smesMarkStore = this;
+
+    return new Promise(function (resolve, reject) {
+
+        //console.log("Fetching: " + smesMarkStore.baseURL + "/getMarkInformation?searchType=Location&latitude=" + cLat + "&longitude=" + cLong + "&radius=" + cRadius + "&format=Full");
+
+        fetch(smesMarkStore.baseURL + "/getMarkInformation?searchType=NineFigureNumber&nineFigureNumber=" + nineFigureNumber + "&format=Full", {
                 mode: 'cors'
             }).then(function (response) {
                 return response.json();
@@ -787,7 +893,42 @@ SMESGMap.prototype.addMarker = function (marker, loadHidden) {
 
 
 
-    mapMarker.addListener('click', function () {
+    mapMarker.openInfoBox = function () {
+        var infoBoxEl = document.getElementById("infobox");
+        infoBoxEl.innerHTML = mapMarker.infoContent;
+        smesGMap.setSelectedMarker(mapMarker);
+        smesGMap.infoBox.open(smesGMap.map, this);
+        smesGMap.infoBox.setVisible(true);
+        smesGMap.map.panTo(mapMarker.position);
+
+        //Mobile apps need extra panning - safari needs extra panning to account for their shitty, idiotic  nav bar at the bottom of the viewport
+        if (smesGMap.mobile !== "") {
+            var pixelPan = 10;
+
+            if (smesGMap.mobile === "iOSSafari") {
+                pixelPan = 25 * 4 / window.devicePixelRatio;
+            }
+            window.setTimeout(function () {
+                smesGMap.map.panBy(0, pixelPan);
+            }, 10);
+        }
+
+
+        if (eventListeners && eventListeners.click) {
+            eventListeners.click.apply();
+        }
+
+        //Make sure that this doesn't fire before the rendering has completed
+        if (eventListeners && eventListeners.domready) {
+            window.setTimeout(function () {
+                eventListeners.domready.apply(this);
+            }, 0);
+        }
+    };
+
+    mapMarker.addListener('click', mapMarker.openInfoBox);
+
+    /*mapMarker.addListener('click', function () {
         //smesGMap.infoWindow.setContent(mapMarker.infoContent); //infoWindowContent);
         //smesGMap.infoWindow.open(smesGMap.map, this);
         var infoBoxEl = document.getElementById("infobox");
@@ -822,7 +963,7 @@ SMESGMap.prototype.addMarker = function (marker, loadHidden) {
         }
 
 
-    });
+    });*/
 
 
     smesGMap.markers.push(mapMarker);
@@ -2616,6 +2757,22 @@ function domReadyHandler(nineFigureNumber, markName) {
 
     };
 
+}
+
+function findNineFigureNumber(nineFigureString) {
+
+    markStore.findNineFigureNumber(nineFigureString).then(function (val) {
+        smesMap.map.panTo(new google.maps.LatLng(val.lat, val.lng));
+        window.setTimeout(function () {
+            for (var markerCounter = 0; smesMap.markers.length; markerCounter++)
+                if (smesMap.markers[markerCounter].nineFigureNo === parseInt(nineFigureString)) {
+                    smesMap.markers[markerCounter].openInfoBox();
+                    return;
+                }
+        }, 0);
+    }).catch(function (err) {
+        console.log(err);
+    })
 }
 
 function returnMarkType(surveyMark) {

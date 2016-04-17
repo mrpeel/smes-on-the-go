@@ -293,7 +293,42 @@ SMESGMap.prototype.addMarker = function (marker, loadHidden) {
 
 
 
-    mapMarker.addListener('click', function () {
+    mapMarker.openInfoBox = function () {
+        var infoBoxEl = document.getElementById("infobox");
+        infoBoxEl.innerHTML = mapMarker.infoContent;
+        smesGMap.setSelectedMarker(mapMarker);
+        smesGMap.infoBox.open(smesGMap.map, this);
+        smesGMap.infoBox.setVisible(true);
+        smesGMap.map.panTo(mapMarker.position);
+
+        //Mobile apps need extra panning - safari needs extra panning to account for their shitty, idiotic  nav bar at the bottom of the viewport
+        if (smesGMap.mobile !== "") {
+            var pixelPan = 10;
+
+            if (smesGMap.mobile === "iOSSafari") {
+                pixelPan = 25 * 4 / window.devicePixelRatio;
+            }
+            window.setTimeout(function () {
+                smesGMap.map.panBy(0, pixelPan);
+            }, 10);
+        }
+
+
+        if (eventListeners && eventListeners.click) {
+            eventListeners.click.apply();
+        }
+
+        //Make sure that this doesn't fire before the rendering has completed
+        if (eventListeners && eventListeners.domready) {
+            window.setTimeout(function () {
+                eventListeners.domready.apply(this);
+            }, 0);
+        }
+    };
+
+    mapMarker.addListener('click', mapMarker.openInfoBox);
+
+    /*mapMarker.addListener('click', function () {
         //smesGMap.infoWindow.setContent(mapMarker.infoContent); //infoWindowContent);
         //smesGMap.infoWindow.open(smesGMap.map, this);
         var infoBoxEl = document.getElementById("infobox");
@@ -328,7 +363,7 @@ SMESGMap.prototype.addMarker = function (marker, loadHidden) {
         }
 
 
-    });
+    });*/
 
 
     smesGMap.markers.push(mapMarker);

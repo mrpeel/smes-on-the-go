@@ -580,6 +580,22 @@ function domReadyHandler(nineFigureNumber, markName) {
 
 }
 
+function findNineFigureNumber(nineFigureString) {
+
+    markStore.findNineFigureNumber(nineFigureString).then(function (val) {
+        smesMap.map.panTo(new google.maps.LatLng(val.lat, val.lng));
+        window.setTimeout(function () {
+            for (var markerCounter = 0; smesMap.markers.length; markerCounter++)
+                if (smesMap.markers[markerCounter].nineFigureNo === parseInt(nineFigureString)) {
+                    smesMap.markers[markerCounter].openInfoBox();
+                    return;
+                }
+        }, 0);
+    }).catch(function (err) {
+        console.log(err);
+    })
+}
+
 function returnMarkType(surveyMark) {
     var markType = {};
     var isSCN = false,
