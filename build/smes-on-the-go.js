@@ -2190,6 +2190,7 @@ var errorMsg;
 var mobileOS;
 var elTimer;
 var overlayEl;
+var searchText;
 
 //Variables for map and markers
 var smesMap;
@@ -2290,6 +2291,9 @@ window.addEventListener('load', function (e) {
     document.getElementById("clear-search").addEventListener("click", clearSearch, false);
     document.getElementById("nav-about").addEventListener("click", showAbout, false);
     document.getElementById("about-OK").addEventListener("click", hideAbout, false);
+
+    searchText = document.getElementById("location-search");
+    searchText.addEventListener("input", checkSearchNineFigure, false);
 
     overlayEl = document.getElementById("screen-overlay");
 
@@ -2759,10 +2763,25 @@ function domReadyHandler(nineFigureNumber, markName) {
 
 }
 
+function checkSearchNineFigure() {
+    //Check whether search text could be a nine figure number
+    if (searchText.value.length === 9 && searchText.value % 1 === 0) {
+        //See if nine figure ca nb elocated
+        if (findNineFigureNumber(searchText.value)) {
+            //Nine figure found, so remove the not found class
+            searchText.classList.remove("not-found");
+        }
+    }
+}
+
 function findNineFigureNumber(nineFigureString) {
 
     markStore.findNineFigureNumber(nineFigureString).then(function (val) {
         smesMap.map.panTo(new google.maps.LatLng(val.lat, val.lng));
+        //Make sure the map is zoomed in enough to display the marker
+        if (smesMap.map.zoom < 17) {
+            smesMap.map.zoom = 17;
+        }
         window.setTimeout(function () {
             for (var markerCounter = 0; smesMap.markers.length; markerCounter++)
                 if (smesMap.markers[markerCounter].nineFigureNo === parseInt(nineFigureString)) {
@@ -2770,9 +2789,11 @@ function findNineFigureNumber(nineFigureString) {
                     return;
                 }
         }, 0);
+        return true;
     }).catch(function (err) {
         console.log(err);
-    })
+        return false;
+    });
 }
 
 function returnMarkType(surveyMark) {
