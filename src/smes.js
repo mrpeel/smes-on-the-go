@@ -588,34 +588,34 @@ function checkSearchNineFigure() {
     //Check whether search text could be a nine figure number
     if (searchText.value.length === 9 && searchText.value % 1 === 0) {
         //See if nine figure ca nb elocated
-        if (findNineFigureNumber(searchText.value)) {
-            //Nine figure found, so remove the not found class
+        var nineFigureString = searchText.value;
+
+        markStore.findNineFigureNumber(nineFigureString).then(function (val) {
+            smesMap.map.panTo(new google.maps.LatLng(val.lat, val.lng));
+            //Make sure the map is zoomed in enough to display the marker
+            if (smesMap.map.zoom < 17) {
+                smesMap.map.zoom = 17;
+            }
+            document.getElementById("location-search").blur();
             searchText.classList.remove("not-found");
-        }
+
+            window.setTimeout(function () {
+                for (var markerCounter = 0; smesMap.markers.length; markerCounter++)
+                    if (smesMap.markers[markerCounter].nineFigureNo === parseInt(nineFigureString)) {
+                        smesMap.markers[markerCounter].openInfoBox();
+
+                        return;
+                    }
+            }, 0);
+            return true;
+        }).catch(function (err) {
+            console.log(err);
+            return false;
+        });
+
     }
 }
 
-function findNineFigureNumber(nineFigureString) {
-
-    markStore.findNineFigureNumber(nineFigureString).then(function (val) {
-        smesMap.map.panTo(new google.maps.LatLng(val.lat, val.lng));
-        //Make sure the map is zoomed in enough to display the marker
-        if (smesMap.map.zoom < 17) {
-            smesMap.map.zoom = 17;
-        }
-        window.setTimeout(function () {
-            for (var markerCounter = 0; smesMap.markers.length; markerCounter++)
-                if (smesMap.markers[markerCounter].nineFigureNo === parseInt(nineFigureString)) {
-                    smesMap.markers[markerCounter].openInfoBox();
-                    return;
-                }
-        }, 0);
-        return true;
-    }).catch(function (err) {
-        console.log(err);
-        return false;
-    });
-}
 
 function returnMarkType(surveyMark) {
     var markType = {};
