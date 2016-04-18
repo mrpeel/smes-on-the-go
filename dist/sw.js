@@ -1,6 +1,6 @@
 /*global self, caches, Promise, URL, location, fetch */
 
-var staticCacheName = 'smes-otg-v1460923713566';
+var staticCacheName = 'smes-otg-v1460979436940';
 var preCache = [
                 'material.min.css',
                 'material.min.js',
