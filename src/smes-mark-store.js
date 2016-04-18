@@ -296,6 +296,53 @@ SMESMarkStore.prototype.processRetrievedMarks = function (retrievedData) {
     });
 };
 
+SMESMarkStore.prototype.findNineFigureNumber = function (nineFigureNumber) {
+    "use strict";
+
+    var smesMarkStore = this;
+    var coords = {};
+
+    return new Promise(function (resolve, reject) {
+        //Check that the input value is a nine figure number
+        if (nineFigureNumber.length === 9 && nineFigureNumber % 1 === 0) {
+
+            //Check if this mark has already been stored
+            if (smesMarkStore.markData[nineFigureNumber]) {
+                coords.lat = smesMarkStore.markData[nineFigureNumber].latitude;
+                coords.lng = smesMarkStore.markData[nineFigureNumber].longitude;
+                resolve(coords);
+            } else {
+                //Mark was not found in local store - call service to check for it
+                console.log("Processing nineFigureNumber request");
+                smesMarkStore.lastSuccesfullRetrieve = new Date();
+                smesMarkStore.retrieveMarkByNineFigure(nineFigureNumber).then(function (marksRetrieved) {
+                    //Check data element is present, if so process it, and run the callback function
+                    if (marksRetrieved) {
+                        smesMarkStore.processRetrievedMarks(marksRetrieved).then(function () {
+                            console.log("Executing callback");
+                            smesMarkStore.tooManyMarks = false;
+                            coords.lat = smesMarkStore.markData[nineFigureNumber].latitude;
+                            coords.lng = smesMarkStore.markData[nineFigureNumber].longitude;
+                            resolve(coords);
+                        });
+
+                    } else {
+                        //If nothing was retrieved, the return false
+                        reject("Not found");
+                    }
+                }).catch(function (err) {
+                    //On error return false
+                    reject("Not found");
+                });
+
+
+            }
+        } else {
+            reject("Not a Nine Figure NUmber");
+        }
+    });
+};
+
 
 SMESMarkStore.prototype.setAddress = function (nineFigureNumber, address) {
     "use strict";
@@ -342,6 +389,65 @@ SMESMarkStore.prototype.retrieveMarkInformation = function (cLat, cLong, cRadius
         //console.log("Fetching: " + smesMarkStore.baseURL + "/getMarkInformation?searchType=Location&latitude=" + cLat + "&longitude=" + cLong + "&radius=" + cRadius + "&format=Full");
 
         fetch(smesMarkStore.baseURL + "/getMarkInformation?searchType=Location&latitude=" + cLat + "&longitude=" + cLong + "&radius=" + cRadius + "&format=Full", {
+                mode: 'cors'
+            }).then(function (response) {
+                return response.json();
+            }).then(function (jsonResponse) {
+                //console.log("Response");
+                //console.log(jsonResponse);
+
+                //Check for success - the messages element will not be present for success
+                if (typeof jsonResponse.messages === 'undefined') {
+                    //Results returned
+                    resolve(jsonResponse.data);
+                } else {
+                    //Error returned
+                    //Check for too many marks
+                    if (jsonResponse.messages.message === "More than 250 marks were found for this search. Please refine your search criteria.") {
+                        //Add message that the area has too many marks
+                        console.log("Too many marks");
+                        reject("Too many marks");
+
+                    } else if (jsonResponse.messages.message === "No survey marks matched the criteria provided.") {
+                        //Check for no marks
+                        console.log("No marks found");
+                        resolve([]);
+                    } else {
+                        //another message returned, log it
+                        console.log(jsonResponse.messages.message);
+                        reject("Webservice error");
+                    }
+                }
+
+            })
+            .catch(function (err) {
+                console.log(err);
+                //if (xr.status === 0 && xr.response === "") {
+                smesMarkStore.delayNextRequest();
+                console.log("Too many requests");
+                //}
+                reject(err);
+            });
+    });
+
+};
+
+
+/**
+ * Call the getMarkInfornmation web service.  
+ * @param {number} nineFigureNumber - the nine figure number to search for
+ * @return {promise} a promise which will resolve a data structure which contains the mark information 
+ */
+SMESMarkStore.prototype.retrieveMarkByNineFigure = function (nineFigureNumber) {
+    "use strict";
+
+    var smesMarkStore = this;
+
+    return new Promise(function (resolve, reject) {
+
+        //console.log("Fetching: " + smesMarkStore.baseURL + "/getMarkInformation?searchType=Location&latitude=" + cLat + "&longitude=" + cLong + "&radius=" + cRadius + "&format=Full");
+
+        fetch(smesMarkStore.baseURL + "/getMarkInformation?searchType=NineFigureNumber&nineFigureNumber=" + nineFigureNumber + "&format=Full", {
                 mode: 'cors'
             }).then(function (response) {
                 return response.json();

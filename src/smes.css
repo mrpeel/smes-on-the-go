@@ -6,6 +6,7 @@ body {
     margin: 0;
     padding: 0;
     position: fixed;
+    /*width: 414px;*/
 }
 .title-text {
     font-family: "Muli";
