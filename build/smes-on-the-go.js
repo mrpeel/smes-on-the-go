@@ -2545,12 +2545,12 @@ function loadMark(surveyMark, loadType, loadHidden) {
 
     preparedMark = prepMarkForMap(surveyMark);
 
-    if(preparedMark.marker) {
-    if (loadType === "new") {
-        smesMap.addMarker(preparedMark.marker, loadHidden);
-    } else {
-        smesMap.updateMarker(preparedMark.marker);
-    }
+    if (preparedMark && preparedMark.marker) {
+        if (loadType === "new") {
+            smesMap.addMarker(preparedMark.marker, loadHidden);
+        } else {
+            smesMap.updateMarker(preparedMark.marker);
+        }
     }
 
 }
@@ -2566,7 +2566,7 @@ function prepMarkForMap(surveyMark) {
     if (!surveyMark.nineFigureNumber || !surveyMark.name || !surveyMark.latitude || !surveyMark.longitude) {
         console.log('Survey mark can\'t be prepped - data missing');
         console.log(surveyMark);
-        return  null;
+        return null;
     }
 
     var closeButton = '<button id="close-info-box" class="close-button mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--icon">' +

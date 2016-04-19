@@ -366,7 +366,7 @@ function loadMark(surveyMark, loadType, loadHidden) {
 
     preparedMark = prepMarkForMap(surveyMark);
 
-    if (preparedMark.marker) {
+    if (preparedMark && preparedMark.marker) {
         if (loadType === "new") {
             smesMap.addMarker(preparedMark.marker, loadHidden);
         } else {
