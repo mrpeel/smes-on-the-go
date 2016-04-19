@@ -2545,13 +2545,12 @@ function loadMark(surveyMark, loadType, loadHidden) {
 
     preparedMark = prepMarkForMap(surveyMark);
 
+    if(preparedMark.marker) {
     if (loadType === "new") {
         smesMap.addMarker(preparedMark.marker, loadHidden);
-
     } else {
-
         smesMap.updateMarker(preparedMark.marker);
-
+    }
     }
 
 }
@@ -2562,6 +2561,13 @@ function prepMarkForMap(surveyMark) {
     var eventListeners = {};
     var marker = {};
     var navigateString, cardDiv;
+
+    //Make sure nothing has been lost in the required data to plot the mark
+    if (!surveyMark.nineFigureNumber || !surveyMark.name || !surveyMark.latitude || !surveyMark.longitude) {
+        console.log('Survey mark can\'t be prepped - data missing');
+        console.log(surveyMark);
+        return  null;
+    }
 
     var closeButton = '<button id="close-info-box" class="close-button mdl-button mdl-js-button mdl-js-ripple-effect mdl-button--icon">' +
         '<i class="material-icons">close</i>' +
