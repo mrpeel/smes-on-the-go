@@ -600,7 +600,7 @@ function checkSearchNineFigure() {
             searchText.classList.remove("not-found");
 
             window.setTimeout(function () {
-                for (var markerCounter = 0; smesMap.markers.length; markerCounter++)
+                for (var markerCounter = 0; markerCounter < smesMap.markers.length; markerCounter++)
                     if (smesMap.markers[markerCounter].nineFigureNo === parseInt(nineFigureString)) {
                         smesMap.markers[markerCounter].openInfoBox();
 
