@@ -51,7 +51,8 @@ SMESMarkStore.prototype.retrieveStoredMarks = function () {
         var markKeys = Object.keys(smesMarkStore.markData);
 
         markKeys.forEach(function (nineFigureNumber) {
-            if (smesMarkStore.markData[nineFigureNumber].lastUpdated > comparisonMSec) {
+            //Check when the data was last updated and make sure the data hash isn't present (hash was a previous implementation)
+            if (smesMarkStore.markData[nineFigureNumber].lastUpdated > comparisonMSec && !smesMarkStore.markData[nineFigureNumber].dataHash) {
                 smesMarkStore.loadMark.apply(smesMarkStore, [smesMarkStore.markData[nineFigureNumber], "new", true]);
             } else {
                 delete smesMarkStore.markData[nineFigureNumber];
