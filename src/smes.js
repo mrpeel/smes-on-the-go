@@ -194,7 +194,6 @@ function clearSearch() {
 }
 
 function setupMap() {
-
     var mapOptions = {};
     mobileOS = isMobile();
 
@@ -222,6 +221,7 @@ function setupMap() {
     };
 
     smesMap = new SMESGMap("map", mapOptions);
+    window.smesMap = smesMap;
     if (mobileOS !== "") {
         smesMap.map.setOptions({
             zoomControl: false
@@ -491,8 +491,17 @@ function markClickHandler(nineFigureNumber, lat, lng) {
 
         //Hide connection icon
         connectionIndicator.classList.add("hidden");
-
+        
         console.log(nineFigureNumber);
+        var closeButt = document.getElementById('close-info-box');
+        if (closeButt) {
+            closeButt.addEventListener('click', function () {
+                var smesGMap = window.smesMap;
+                
+                smesGMap.infoBox.setVisible(false);
+                smesGMap.resetSelectedMarker();
+            });
+        }
     };
 
 }
