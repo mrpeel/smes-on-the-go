@@ -199,7 +199,7 @@ function setupMap() {
   var mapOptions = {};
   mobileOS = isMobile();
 
-  mapOptions.pixelVerticalOffSet = -25;
+  mapOptions.pixelVerticalOffSet = -80;
 
 
   if (mobileOS !== "") {
@@ -209,11 +209,10 @@ function setupMap() {
   //Set the negative vertical offset required for iOS
   if (mobileOS.indexOf("iOS") === 0) {
     if (window.devicePixelRatio == 2) {
-      mapOptions.pixelVerticalOffSet = -28;
+      mapOptions.pixelVerticalOffSet += -28;
     } else if (window.devicePixelRatio == 3) {
-      mapOptions.pixelVerticalOffSet = -54;
+      mapOptions.pixelVerticalOffSet += -54;
     }
-
   }
 
   mapOptions.idle = requestMarkInformation;
