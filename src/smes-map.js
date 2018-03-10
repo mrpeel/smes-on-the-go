@@ -62,7 +62,7 @@ var SMESGMap = function(elementId, options) {
   smesGMap.infoWindow = new google.maps.InfoWindow();
   smesGMap.infoBox = new InfoBox({
     content: document.getElementById("infobox"),
-    disableAutoPan: true,
+    disableAutoPan: false,
     maxWidth: 440,
     pixelOffset: new google.maps.Size(-220, smesGMap.pixelVerticalOffSet),
     zIndex: 25,

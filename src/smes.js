@@ -132,11 +132,11 @@ window.addEventListener('load', function(e) {
   markStore = new SMESMarkStore(markStoreOptions);
 
 
-  //Wait one second before starting mark loading process
+  //Wait two seconds before starting mark loading process
   window.setTimeout(function() {
     startingUp = false;
     markStore.retrieveStoredMarks();
-  }, 1000);
+  }, 2000);
 
   //When current processing is one, set-up map style click handlers
   window.setTimeout(function() {
@@ -199,7 +199,7 @@ function setupMap() {
   var mapOptions = {};
   mobileOS = isMobile();
 
-  mapOptions.pixelVerticalOffSet = -80;
+  mapOptions.pixelVerticalOffSet = -140;
 
 
   if (mobileOS !== "") {
@@ -214,6 +214,8 @@ function setupMap() {
       mapOptions.pixelVerticalOffSet += -54;
     }
   }
+
+  console.log('pixelVerticalOffSet' + mapOptions.pixelVerticalOffSet);
 
   mapOptions.idle = requestMarkInformation;
   mapOptions.zoomChanged = displayZoomMessage;
