@@ -257,12 +257,12 @@ SMESMarkStore.prototype.processRetrievedMarks = function(retrievedData) {
       retrievedData.forEach(function(markData) {
         var matches;
         var loadType = "new";
-
-        // Fix changed values gda94 -> datum
-        markData.gda94Technique = markData.datumTechnique || "";
-        markData.gda94Measurements = markData.datumMeasurements || "";
-        markData.gda94PublishedDate = markData.datumPublishedDate || "";
-        markData.gda94Source = markData.datumSource || "";
+		
+		// Using GDA2020 as default datum
+		markData.gda2020Technique = markData.datumTechnique || "";
+        markData.gda2020Measurements = markData.datumMeasurements || "";
+        markData.gda2020PublishedDate = markData.datumPublishedDate || "";
+        markData.gda2020Source = markData.datumSource || "";
 
         if (smesMarkStore.markData[markData.nineFigureNumber]) {
           //Already have the mark - check if it's changed
@@ -408,7 +408,7 @@ SMESMarkStore.prototype.retrieveMarkInformation = function(
         cLong +
         "&radius=" +
         cRadius +
-        "&format=Full",
+        "&format=Full&datum=GDA2020",
       {
         mode: "cors",
       }
@@ -470,12 +470,12 @@ SMESMarkStore.prototype.retrieveMarkByNineFigure = function(nineFigureNumber) {
 
   return new Promise(function(resolve, reject) {
     //console.log("Fetching: " + smesMarkStore.baseURL + "/getMarkInformation?searchType=Location&latitude=" + cLat + "&longitude=" + cLong + "&radius=" + cRadius + "&format=Full");
-
+	// NT - add datum here
     fetch(
       smesMarkStore.baseURL +
         "/getMarkInformation?searchType=NineFigureNumber&nineFigureNumber=" +
         nineFigureNumber +
-        "&format=Full",
+        "&format=Full&datum=GDA2020",
       {
         mode: "cors",
       }
@@ -542,7 +542,8 @@ SMESMarkStore.prototype.getSurveyMarkSketchResponse = function(
     fetch(
       smesMarkStore.baseURL +
         "/getSurveyMarkSketches?returnDefective=true&markList=" +
-        nineFigureNumber,
+        nineFigureNumber +
+		"&datum=GDA2020",
       {
         mode: "cors",
       }
@@ -592,7 +593,8 @@ SMESMarkStore.prototype.getSurveyMarkReportResponse = function(
     fetch(
       smesMarkStore.baseURL +
         "/getSurveyMarkReports?returnDefective=true&markList=" +
-        nineFigureNumber,
+        nineFigureNumber +
+		"&datum=GDA2020",
       {
         mode: "cors",
       }
@@ -2262,8 +2264,8 @@ var searchText;
 //Variables for map and markers
 var smesMap;
 var markStore;
-var scnAHDValues = ["ZEROTH ORDER", "2ND ORDER", "3RD ORDER", "SPIRIT LEVELLING"];
-var scnGDA94Value = "ADJUSTMENT";
+var LAHDValue = "SPIRIT LEVELLING";
+var scnGDA2020Value = "ADJUSTMENT";
 var pcmSearchText = "PCM";
 var currentNineFigureNumber;
 var currentLatLng = {};
@@ -2687,13 +2689,13 @@ function prepMarkForMap(surveyMark) {
     '<div class="content">' +
     //'<div id="address' + surveyMark.nineFigureNumber + '" class="mark-address"></div>' +
     contentSDiv + 'Address:' + contentMDiv + '<div id="address' + surveyMark.nineFigureNumber + '"></div>' + contentEDiv +
-    contentSDiv + 'GDA94:' + contentMDiv + surveyMark.latitude + ', ' + surveyMark.longitude + contentEDiv +
+    contentSDiv + 'GDA2020:' + contentMDiv + surveyMark.latitude + ', ' + surveyMark.longitude + contentEDiv +
     contentSDiv + 'MGA:' + contentMDiv + surveyMark.zone + ', ' + surveyMark.easting + ', ' + surveyMark.northing + contentEDiv +
-    contentSDiv + 'Technique:' + contentMDiv + surveyMark.gda94Technique + contentEDiv +
+    contentSDiv + 'Technique:' + contentMDiv + surveyMark.gda2020Technique + contentEDiv +
     contentSDiv + 'Ellipsoid height:' + contentMDiv + surveyMark.ellipsoidHeight + contentEDiv +
     contentSDiv + 'Uncertainty:' + contentMDiv + surveyMark.hUncertainty + contentEDiv +
     contentSDiv + 'Order:' + contentMDiv + surveyMark.hOrder + contentEDiv +
-    contentSDiv + 'Measurements:' + contentMDiv + surveyMark.gda94Measurements + contentEDiv +
+    contentSDiv + 'Measurements:' + contentMDiv + surveyMark.gda2020Measurements + contentEDiv +
     '</div>' +
     '</div>' +
     '<div class="vert-spacer"></div>' +
@@ -2887,8 +2889,9 @@ function returnMarkType(surveyMark) {
   var isSCN = false,
     isPCM = false,
     hasAHD = false,
-    isSCNGDA94 = false,
-    isSCNAHD = false,
+    isSCNGDA2020 = false,
+    isLAHD = false,
+	  hasLAHDADJdate = false,
     isDefective = hasAHD;
 
 
@@ -2908,17 +2911,22 @@ function returnMarkType(surveyMark) {
     if (String(surveyMark.nineFigureNumber).indexOf("1") === 0) {
       isPCM = true;
     }
-    //Retrieve GDA94 technique to determine whether SCN GDA94
-    if (surveyMark.gda94Technique.indexOf(scnGDA94Value) >= 0) {
-      isSCNGDA94 = true;
+    //Retrieve GDA2020 technique to determine whether SCN GDA2020
+    if (surveyMark.gda2020Technique.indexOf(scnGDA2020Value) >= 0) {
+      isSCNGDA2020 = true;
     }
 
-    //Check AHD technique to determine whether it is SCN AHD
-    scnAHDValues.forEach(function(ahdApproxValue) {
-      if (surveyMark.ahdTechnique.indexOf(ahdApproxValue) >= 0) {
-        isSCNAHD = true;
-      }
-    });
+    //Check AHD technique to determine whether it is spirit levelled
+    if (surveyMark.ahdTechnique.indexOf(LAHDValue) >= 0) {
+      isLAHD = true;
+    }
+	
+	//Check if there is an associated AHD Adjustment publish date
+    if (surveyMark.ahdPublishedDate !== "") {
+      hasLAHDADJdate = true;
+    }
+	}
+	
 
     //Now all of the source values have been retrieved, work through possible combinations to determine correct symbol
     if (isDefective) {
@@ -2926,32 +2934,43 @@ function returnMarkType(surveyMark) {
       markType.markDetails = "Defective";
 
     } else if (!isDefective && !isSCN && !hasAHD) {
-      markType.iconName = "gda94approx-pm";
-      markType.markDetails = "Non-SCN (GDA94)";
+      markType.iconName = "gdaapprox-pm";
+      markType.markDetails = "Non-SCN (GDA)";
     } else if (!isDefective && !isSCN && hasAHD) {
-      markType.iconName = "ahdapprox-pm";
-      markType.markDetails = "Non-SCN (GDA94), non-SCN (AHD)";
-    } else if (!isDefective && isSCN && isPCM) {
-      markType.iconName = "scn-gda94-pcm";
-      markType.markDetails = "SCN (GDA94)";
-    } else if (!isDefective && isSCN && !hasAHD && !isPCM) {
-      markType.iconName = "scn-gda94-pm";
-      markType.markDetails = "SCN (GDA94)";
-    } else if (!isDefective && isSCN && hasAHD && !isSCNGDA94) {
-      markType.iconName = "scn-ahd-pm";
-      markType.markDetails = "Non-SCN (GDA94), SCN (AHD)";
-    } else if (!isDefective && isSCN && hasAHD && isSCNGDA94 && isSCNAHD) {
-      markType.iconName = "scn-gda94-ahd-pm";
-      markType.markDetails = "SCN (GDA94), SCN (AHD)";
-    } else if (!isDefective && isSCN && hasAHD && isSCNGDA94 && !isSCNAHD) {
-      markType.iconName = "scn-gda94-ahdapprox-pm";
-      markType.markDetails = "Non-SCN (GDA94)";
+      markType.iconName = "ahdest-pm";
+      markType.markDetails = "Non-SCN (GDA), Estimated AHD";
+    } else if (!isDefective && isPCM) {
+      markType.iconName = "pcm";
+      markType.markDetails = "PCM";
+    } else if (!isDefective && isSCN && isSCNGDA2020 && !hasAHD && !isPCM) {
+      markType.iconName = "scngda-pm";
+      markType.markDetails = "SCN (GDA)";
+    } else if (!isDefective && !isSCN && isLAHD && hasAHD && !isSCNGDA2020) {
+      markType.iconName = "lahd-pm";
+      markType.markDetails = "Non-SCN (GDA), AHD";
+    } else if (!isDefective && isSCN && hasAHD && isSCNGDA2020 && isLAHD) {
+      markType.iconName = "scngda-lahd-pm";
+      markType.markDetails = "SCN (GDA), AHD";
+    } else if (!isDefective && isSCN && hasAHD && isSCNGDA2020 && !isLAHD) {
+      markType.iconName = "scngda-ahdest-pm";
+      markType.markDetails = "SCN (GDA), Estimated AHD";
+    //no symbols yet
+	} else if (!isDefective && !isSCN && hasAHD && isLAHD && hasLAHDADJdate && !isSCNGDA2020) {
+      markType.iconName = "ladjahd-pm";
+      markType.markDetails = "Non-SCN (GDA), Adjusted AHD";
+    //no symbols yet
+	} else if (!isDefective && isSCN && hasAHD && hasLAHDADJdate && isSCNGDA2020 && isLAHD) {
+      markType.iconName = "scngda-ladjahd-pm";
+      markType.markDetails = "SCN (GDA), Adjusted AHD";
     }
+	
   }
 
-  return markType;
+  return markType;+
 
 }
+
+
 /**
  * Attempt to detect the page being used ona  mobile device.
  * @return {string} - Android, iOS or empty string
