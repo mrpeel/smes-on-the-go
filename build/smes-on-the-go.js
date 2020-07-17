@@ -2954,11 +2954,9 @@ function returnMarkType(surveyMark) {
     } else if (!isDefective && isSCN && hasAHD && isSCNGDA2020 && !isLAHD) {
       markType.iconName = "scngda-ahdest-pm";
       markType.markDetails = "SCN (GDA), Estimated AHD";
-    //no symbols yet
 	} else if (!isDefective && !isSCN && hasAHD && isLAHD && hasLAHDADJdate && !isSCNGDA2020) {
       markType.iconName = "ladjahd-pm";
       markType.markDetails = "Non-SCN (GDA), Adjusted AHD";
-    //no symbols yet
 	} else if (!isDefective && isSCN && hasAHD && hasLAHDADJdate && isSCNGDA2020 && isLAHD) {
       markType.iconName = "scngda-ladjahd-pm";
       markType.markDetails = "SCN (GDA), Adjusted AHD";
@@ -2966,8 +2964,7 @@ function returnMarkType(surveyMark) {
 	
   }
 
-  return markType;+
-
+  return markType;
 }
 
 
