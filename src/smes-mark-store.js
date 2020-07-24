@@ -1,7 +1,7 @@
 /*global Promise, setTimeout, window, document, console, navigator, self, MouseEvent, Blob, FileReader, module, atob, Uint8Array, define */
 /*global ReverseGeocoder, fetch, idb, IDBKeyRange */
 
-var SMESMarkStore = function(storeOptions) {
+var SMESMarkStore = function (storeOptions) {
   "use strict";
   var smesMarkStore = this;
   storeOptions = storeOptions || {};
@@ -26,7 +26,7 @@ var SMESMarkStore = function(storeOptions) {
 
   window.addEventListener(
     "beforeunload",
-    function(e) {
+    function (e) {
       // Do something
       smesMarkStore.executeSaveMarks();
     },
@@ -34,7 +34,7 @@ var SMESMarkStore = function(storeOptions) {
   );
 };
 
-SMESMarkStore.prototype.retrieveStoredMarks = function() {
+SMESMarkStore.prototype.retrieveStoredMarks = function () {
   "use strict";
   var smesMarkStore = this;
   var storedData, mark;
@@ -52,7 +52,7 @@ SMESMarkStore.prototype.retrieveStoredMarks = function() {
 
     var markKeys = Object.keys(smesMarkStore.markData);
 
-    markKeys.forEach(function(nineFigureNumber) {
+    markKeys.forEach(function (nineFigureNumber) {
       //Check when the data was last updated and make sure the data hash isn't present (hash was a previous implementation)
       if (
         smesMarkStore.markData[nineFigureNumber].lastUpdated > comparisonMSec &&
@@ -75,7 +75,7 @@ SMESMarkStore.prototype.retrieveStoredMarks = function() {
   }
 };
 
-SMESMarkStore.prototype.clearStoredMarks = function() {
+SMESMarkStore.prototype.clearStoredMarks = function () {
   "use strict";
   var smesMarkStore = this;
 
@@ -90,7 +90,7 @@ SMESMarkStore.prototype.clearStoredMarks = function() {
   }
 };
 
-SMESMarkStore.prototype.saveMarksToStorage = function() {
+SMESMarkStore.prototype.saveMarksToStorage = function () {
   "use strict";
   var smesMarkStore = this;
 
@@ -106,14 +106,14 @@ SMESMarkStore.prototype.saveMarksToStorage = function() {
 
   //Set function to write storage after 1 minute.
   // if another write request comes in within 1 minute, smesMarkStore.lastStorageTimeStamp variable will have changed and the write will be aborted.
-  window.setTimeout(function() {
+  window.setTimeout(function () {
     if (storageTimeStamp === smesMarkStore.lastStorageTimeStamp) {
       smesMarkStore.executeSaveMarks();
     }
   }, 60000);
 };
 
-SMESMarkStore.prototype.executeSaveMarks = function() {
+SMESMarkStore.prototype.executeSaveMarks = function () {
   "use strict";
   var culledMarkData;
   var smesMarkStore = this;
@@ -147,14 +147,14 @@ SMESMarkStore.prototype.executeSaveMarks = function() {
   }
 };
 
-SMESMarkStore.prototype.removeOldMarks = function(numberOfDays) {
+SMESMarkStore.prototype.removeOldMarks = function (numberOfDays) {
   "use strict";
   var smesMarkStore = this;
   var individualMark;
   var comparisonMSec = Date.now() - numberOfDays * smesMarkStore.msecPerDay + 1;
   var newMarkData = smesMarkStore.markData;
 
-  newMarkData.forEach(function(mark) {
+  newMarkData.forEach(function (mark) {
     if (mark.lastUpdated < comparisonMSec) {
       delete newMarkData[mark.nineFigureNumber];
     }
@@ -163,7 +163,7 @@ SMESMarkStore.prototype.removeOldMarks = function(numberOfDays) {
   return newMarkData;
 };
 
-SMESMarkStore.prototype.delayNextRequest = function() {
+SMESMarkStore.prototype.delayNextRequest = function () {
   "use strict";
   var smesMarkStore = this;
 
@@ -171,7 +171,7 @@ SMESMarkStore.prototype.delayNextRequest = function() {
   smesMarkStore.lastSuccesfullRetrieve = Date.now() + 20000;
 };
 
-SMESMarkStore.prototype.requestMarkInformation = function(requestOptions) {
+SMESMarkStore.prototype.requestMarkInformation = function (requestOptions) {
   "use strict";
   var smesMarkStore = this;
   var currentRequestTimeStamp = new Date();
@@ -203,7 +203,7 @@ SMESMarkStore.prototype.requestMarkInformation = function(requestOptions) {
   }
 
   //Execute the logic after the appropriate wait
-  window.setTimeout(function() {
+  window.setTimeout(function () {
     //Check if this is still the most recently queued request
     if (currentRequestTimeStamp === smesMarkStore.lastQueuedTimeStamp) {
       console.log("Processing request");
@@ -214,19 +214,19 @@ SMESMarkStore.prototype.requestMarkInformation = function(requestOptions) {
           requestOptions.cLong,
           requestOptions.cRadius
         )
-        .then(function(marksRetrieved) {
+        .then(function (marksRetrieved) {
           //Check data element is present, if so process it, and run the callback function
           if (marksRetrieved) {
             smesMarkStore
               .processRetrievedMarks(marksRetrieved)
-              .then(function() {
+              .then(function () {
                 console.log("Executing callback");
                 smesMarkStore.tooManyMarks = false;
                 requestOptions.finishedCallback.apply(smesMarkStore);
               });
           }
         })
-        .catch(function(err) {
+        .catch(function (err) {
           if (err === "Too many marks") {
             smesMarkStore.tooManyMarks = true;
             requestOptions.tooManyCallback.apply(smesMarkStore);
@@ -241,7 +241,7 @@ SMESMarkStore.prototype.requestMarkInformation = function(requestOptions) {
   }, executionDelay);
 };
 
-SMESMarkStore.prototype.processRetrievedMarks = function(retrievedData) {
+SMESMarkStore.prototype.processRetrievedMarks = function (retrievedData) {
   "use strict";
   var smesMarkStore = this;
 
@@ -250,19 +250,19 @@ SMESMarkStore.prototype.processRetrievedMarks = function(retrievedData) {
     retrievedData = [retrievedData];
   }
 
-  return new Promise(function(resolve, reject) {
+  return new Promise(function (resolve, reject) {
     if (smesMarkStore.useLocalStore) {
       var tStamp = new Date();
 
-      retrievedData.forEach(function(markData) {
+      retrievedData.forEach(function (markData) {
         var matches;
         var loadType = "new";
 
-        // Fix changed values gda94 -> datum
-        markData.gda94Technique = markData.datumTechnique || "";
-        markData.gda94Measurements = markData.datumMeasurements || "";
-        markData.gda94PublishedDate = markData.datumPublishedDate || "";
-        markData.gda94Source = markData.datumSource || "";
+        // Using GDA2020 as default datum
+        markData.gda2020Technique = markData.datumTechnique || "";
+        markData.gda2020Measurements = markData.datumMeasurements || "";
+        markData.gda2020PublishedDate = markData.datumPublishedDate || "";
+        markData.gda2020Source = markData.datumSource || "";
 
         if (smesMarkStore.markData[markData.nineFigureNumber]) {
           //Already have the mark - check if it's changed
@@ -301,7 +301,7 @@ SMESMarkStore.prototype.processRetrievedMarks = function(retrievedData) {
       resolve(true);
     } else {
       //Not using record store, so just load it directly as a new mark
-      retrievedData.forEach(function(markData) {
+      retrievedData.forEach(function (markData) {
         smesMarkStore.loadMark.apply(smesMarkStore, [markData, "new"]);
       });
 
@@ -310,12 +310,12 @@ SMESMarkStore.prototype.processRetrievedMarks = function(retrievedData) {
   });
 };
 
-SMESMarkStore.prototype.findNineFigureNumber = function(nineFigureNumber) {
+SMESMarkStore.prototype.findNineFigureNumber = function (nineFigureNumber) {
   "use strict";
   var smesMarkStore = this;
   var coords = {};
 
-  return new Promise(function(resolve, reject) {
+  return new Promise(function (resolve, reject) {
     //Check that the input value is a nine figure number
     if (nineFigureNumber.length === 9 && nineFigureNumber % 1 === 0) {
       //Check if this mark has already been stored
@@ -329,12 +329,12 @@ SMESMarkStore.prototype.findNineFigureNumber = function(nineFigureNumber) {
         smesMarkStore.lastSuccesfullRetrieve = new Date();
         smesMarkStore
           .retrieveMarkByNineFigure(nineFigureNumber)
-          .then(function(marksRetrieved) {
+          .then(function (marksRetrieved) {
             //Check data element is present, if so process it, and run the callback function
             if (marksRetrieved) {
               smesMarkStore
                 .processRetrievedMarks(marksRetrieved)
-                .then(function() {
+                .then(function () {
                   console.log("Executing callback");
                   smesMarkStore.tooManyMarks = false;
                   coords.lat =
@@ -348,7 +348,7 @@ SMESMarkStore.prototype.findNineFigureNumber = function(nineFigureNumber) {
               reject("Not found");
             }
           })
-          .catch(function(err) {
+          .catch(function (err) {
             //On error return false
             reject("Not found");
           });
@@ -359,7 +359,7 @@ SMESMarkStore.prototype.findNineFigureNumber = function(nineFigureNumber) {
   });
 };
 
-SMESMarkStore.prototype.setAddress = function(nineFigureNumber, address) {
+SMESMarkStore.prototype.setAddress = function (nineFigureNumber, address) {
   "use strict";
   var smesMarkStore = this;
 
@@ -370,7 +370,7 @@ SMESMarkStore.prototype.setAddress = function(nineFigureNumber, address) {
   }
 };
 
-SMESMarkStore.prototype.returnAddress = function(nineFigureNumber) {
+SMESMarkStore.prototype.returnAddress = function (nineFigureNumber) {
   "use strict";
   var smesMarkStore = this;
   var address = "";
@@ -389,7 +389,7 @@ SMESMarkStore.prototype.returnAddress = function(nineFigureNumber) {
  * @param {number} cLat, cLong - the coordinates for the center of the radius to search in
  * @return {promise} a promise which will resolve a data structure which contains the mark information 
  */
-SMESMarkStore.prototype.retrieveMarkInformation = function(
+SMESMarkStore.prototype.retrieveMarkInformation = function (
   cLat,
   cLong,
   cRadius
@@ -397,26 +397,26 @@ SMESMarkStore.prototype.retrieveMarkInformation = function(
   "use strict";
   var smesMarkStore = this;
 
-  return new Promise(function(resolve, reject) {
+  return new Promise(function (resolve, reject) {
     //console.log("Fetching: " + smesMarkStore.baseURL + "/getMarkInformation?searchType=Location&latitude=" + cLat + "&longitude=" + cLong + "&radius=" + cRadius + "&format=Full");
 
     fetch(
       smesMarkStore.baseURL +
-        "/getMarkInformation?searchType=Location&latitude=" +
-        cLat +
-        "&longitude=" +
-        cLong +
-        "&radius=" +
-        cRadius +
-        "&format=Full",
+      "/getMarkInformation?searchType=Location&latitude=" +
+      cLat +
+      "&longitude=" +
+      cLong +
+      "&radius=" +
+      cRadius +
+      "&format=Full&datum=GDA2020",
       {
         mode: "cors",
       }
     )
-      .then(function(response) {
+      .then(function (response) {
         return response.json();
       })
-      .then(function(jsonResponse) {
+      .then(function (jsonResponse) {
         //console.log("Response");
         //console.log(jsonResponse);
 
@@ -448,7 +448,7 @@ SMESMarkStore.prototype.retrieveMarkInformation = function(
           }
         }
       })
-      .catch(function(err) {
+      .catch(function (err) {
         console.log(err);
         //if (xr.status === 0 && xr.response === "") {
         smesMarkStore.delayNextRequest();
@@ -464,26 +464,26 @@ SMESMarkStore.prototype.retrieveMarkInformation = function(
  * @param {number} nineFigureNumber - the nine figure number to search for
  * @return {promise} a promise which will resolve a data structure which contains the mark information 
  */
-SMESMarkStore.prototype.retrieveMarkByNineFigure = function(nineFigureNumber) {
+SMESMarkStore.prototype.retrieveMarkByNineFigure = function (nineFigureNumber) {
   "use strict";
   var smesMarkStore = this;
 
-  return new Promise(function(resolve, reject) {
+  return new Promise(function (resolve, reject) {
     //console.log("Fetching: " + smesMarkStore.baseURL + "/getMarkInformation?searchType=Location&latitude=" + cLat + "&longitude=" + cLong + "&radius=" + cRadius + "&format=Full");
 
     fetch(
       smesMarkStore.baseURL +
-        "/getMarkInformation?searchType=NineFigureNumber&nineFigureNumber=" +
-        nineFigureNumber +
-        "&format=Full",
+      "/getMarkInformation?searchType=NineFigureNumber&nineFigureNumber=" +
+      nineFigureNumber +
+      "&format=Full&datum=GDA2020",
       {
         mode: "cors",
       }
     )
-      .then(function(response) {
+      .then(function (response) {
         return response.json();
       })
-      .then(function(jsonResponse) {
+      .then(function (jsonResponse) {
         //console.log("Response");
         //console.log(jsonResponse);
 
@@ -515,7 +515,7 @@ SMESMarkStore.prototype.retrieveMarkByNineFigure = function(nineFigureNumber) {
           }
         }
       })
-      .catch(function(err) {
+      .catch(function (err) {
         console.log(err);
         //if (xr.status === 0 && xr.response === "") {
         smesMarkStore.delayNextRequest();
@@ -532,29 +532,30 @@ SMESMarkStore.prototype.retrieveMarkByNineFigure = function(nineFigureNumber) {
  * @return {promise} a promise which will resolve a data structure which contains the base64 encoded PDF 
  */
 
-SMESMarkStore.prototype.getSurveyMarkSketchResponse = function(
+SMESMarkStore.prototype.getSurveyMarkSketchResponse = function (
   nineFigureNumber
 ) {
   "use strict";
   var smesMarkStore = this;
 
-  return new Promise(function(resolve, reject) {
+  return new Promise(function (resolve, reject) {
     fetch(
       smesMarkStore.baseURL +
-        "/getSurveyMarkSketches?returnDefective=true&markList=" +
-        nineFigureNumber,
+      "/getSurveyMarkSketches?returnDefective=true&markList=" +
+      nineFigureNumber +
+      "&datum=GDA2020",
       {
         mode: "cors",
       }
     )
-      .then(function(response) {
+      .then(function (response) {
         return response.json();
       })
       /*xr.get(smesMarkStore.baseURL + '/getSurveyMarkSketches', {
                     markList: nineFigureNumber,
                     returnDefective: true
                 })*/
-      .then(function(jsonResponse) {
+      .then(function (jsonResponse) {
         //Check for success - the messages element will not be present for success
         if (typeof jsonResponse.messages === "undefined") {
           //Results returned
@@ -566,7 +567,7 @@ SMESMarkStore.prototype.getSurveyMarkSketchResponse = function(
           reject("Webservice error");
         }
       })
-      .catch(function(err) {
+      .catch(function (err) {
         console.log(err);
         return Promise.reject(err);
       });
@@ -578,29 +579,30 @@ SMESMarkStore.prototype.getSurveyMarkSketchResponse = function(
  * @param {string} nineFigureNumber - the mark's Nine Figure Number
  * @return {promise} a promise which will resolve a data structure which contains the base64 encoded PDF 
  */
-SMESMarkStore.prototype.getSurveyMarkReportResponse = function(
+SMESMarkStore.prototype.getSurveyMarkReportResponse = function (
   nineFigureNumber
 ) {
   "use strict";
   var smesMarkStore = this;
 
-  return new Promise(function(resolve, reject) {
+  return new Promise(function (resolve, reject) {
     /*xr.get(smesMarkStore.baseURL + '/getSurveyMarkReports', {
                 markList: nineFigureNumber,
                 returnDefective: true
             })*/
     fetch(
       smesMarkStore.baseURL +
-        "/getSurveyMarkReports?returnDefective=true&markList=" +
-        nineFigureNumber,
+      "/getSurveyMarkReports?returnDefective=true&markList=" +
+      nineFigureNumber +
+      "&datum=GDA2020",
       {
         mode: "cors",
       }
     )
-      .then(function(response) {
+      .then(function (response) {
         return response.json();
       })
-      .then(function(jsonResponse) {
+      .then(function (jsonResponse) {
         //Check for success - the messages element will not be present for success
         if (typeof jsonResponse.messages === "undefined") {
           //Results returned
@@ -612,14 +614,14 @@ SMESMarkStore.prototype.getSurveyMarkReportResponse = function(
           reject("Webservice error");
         }
       })
-      .catch(function(err) {
+      .catch(function (err) {
         console.log();
         return Promise.reject(err);
       });
   });
 };
 
-SMESMarkStore.prototype.base64toBlob = function(
+SMESMarkStore.prototype.base64toBlob = function (
   b64Data,
   contentType,
   sliceSize

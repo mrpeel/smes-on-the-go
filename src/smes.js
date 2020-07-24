@@ -18,8 +18,8 @@ var searchText;
 //Variables for map and markers
 var smesMap;
 var markStore;
-var scnAHDValues = ["ZEROTH ORDER", "2ND ORDER", "3RD ORDER", "SPIRIT LEVELLING"];
-var scnGDA94Value = "ADJUSTMENT";
+var LAHDValue = "SPIRIT LEVELLING";
+var scnGDA2020Value = "ADJUSTMENT";
 var pcmSearchText = "PCM";
 var currentNineFigureNumber;
 var currentLatLng = {};
@@ -38,7 +38,7 @@ function prepServiceWorker() {
     return;
   }
 
-  navigator.serviceWorker.register('sw.js').then(function(reg) {
+  navigator.serviceWorker.register('sw.js').then(function (reg) {
     if (!navigator.serviceWorker.controller) {
       return;
     }
@@ -53,14 +53,14 @@ function prepServiceWorker() {
       return;
     }
 
-    reg.addEventListener('updatefound', function() {
+    reg.addEventListener('updatefound', function () {
       trackInstalling(reg.installing);
     });
   });
 
   // Ensure refresh is only called once (works around a bug in "force update on reload").
   var refreshing;
-  navigator.serviceWorker.addEventListener('controllerchange', function() {
+  navigator.serviceWorker.addEventListener('controllerchange', function () {
     if (refreshing) {
       return;
     }
@@ -72,7 +72,7 @@ function prepServiceWorker() {
 prepServiceWorker();
 
 function trackInstalling(worker) {
-  worker.addEventListener('statechange', function() {
+  worker.addEventListener('statechange', function () {
     if (worker.state == 'installed') {
       updateReady(worker);
     }
@@ -86,20 +86,20 @@ function updateReady(worker) {
 
   countdownDiv.classList.remove("hidden");
 
-  window.setTimeout(function() {
+  window.setTimeout(function () {
     worker.postMessage({
       action: 'skipWaiting'
     });
   }, 5000);
 
-  cdVals.forEach(function(val) {
-    window.setTimeout(function() {
+  cdVals.forEach(function (val) {
+    window.setTimeout(function () {
       countdownValue.innerText = val;
     }, (5 - val) * 1000);
   });
 }
 
-window.addEventListener('load', function(e) {
+window.addEventListener('load', function (e) {
   //Set variable to bypass initial load when map is getting set
   startingUp = true;
 
@@ -133,13 +133,13 @@ window.addEventListener('load', function(e) {
 
 
   //Wait two seconds before starting mark loading process
-  window.setTimeout(function() {
+  window.setTimeout(function () {
     startingUp = false;
     markStore.retrieveStoredMarks();
   }, 2000);
 
   //When current processing is one, set-up map style click handlers
-  window.setTimeout(function() {
+  window.setTimeout(function () {
     var styleList = document.getElementById("style-option-list");
 
 
@@ -162,7 +162,7 @@ window.addEventListener('load', function(e) {
 
 function createMapClickHandler(elementName, elementText) {
   var el = document.getElementById(elementName);
-  el.addEventListener("click", function() {
+  el.addEventListener("click", function () {
     smesMap.changeMapStyle(elementName);
     document.getElementById("map-style-name").textContent = elementText;
   });
@@ -219,7 +219,7 @@ function setupMap() {
 
   mapOptions.idle = requestMarkInformation;
   mapOptions.zoomChanged = displayZoomMessage;
-  mapOptions.closeInfobox = function() {
+  mapOptions.closeInfobox = function () {
     connectionIndicator.classList.remove("hidden");
   };
 
@@ -315,7 +315,7 @@ function showLoader() {
 }
 
 function hideLoader() {
-  window.setTimeout(function() {
+  window.setTimeout(function () {
     loader.classList.add("hidden");
   }, 0);
 
@@ -443,13 +443,13 @@ function prepMarkForMap(surveyMark) {
     '<div class="content">' +
     //'<div id="address' + surveyMark.nineFigureNumber + '" class="mark-address"></div>' +
     contentSDiv + 'Address:' + contentMDiv + '<div id="address' + surveyMark.nineFigureNumber + '"></div>' + contentEDiv +
-    contentSDiv + 'GDA94:' + contentMDiv + surveyMark.latitude + ', ' + surveyMark.longitude + contentEDiv +
+    contentSDiv + 'GDA2020:' + contentMDiv + surveyMark.latitude + ', ' + surveyMark.longitude + contentEDiv +
     contentSDiv + 'MGA:' + contentMDiv + surveyMark.zone + ', ' + surveyMark.easting + ', ' + surveyMark.northing + contentEDiv +
-    contentSDiv + 'Technique:' + contentMDiv + surveyMark.gda94Technique + contentEDiv +
+    contentSDiv + 'Technique:' + contentMDiv + surveyMark.gda2020Technique + contentEDiv +
     contentSDiv + 'Ellipsoid height:' + contentMDiv + surveyMark.ellipsoidHeight + contentEDiv +
     contentSDiv + 'Uncertainty:' + contentMDiv + surveyMark.hUncertainty + contentEDiv +
     contentSDiv + 'Order:' + contentMDiv + surveyMark.hOrder + contentEDiv +
-    contentSDiv + 'Measurements:' + contentMDiv + surveyMark.gda94Measurements + contentEDiv +
+    contentSDiv + 'Measurements:' + contentMDiv + surveyMark.gda2020Measurements + contentEDiv +
     '</div>' +
     '</div>' +
     '<div class="vert-spacer"></div>' +
@@ -490,7 +490,7 @@ function prepMarkForMap(surveyMark) {
 }
 
 function markClickHandler(nineFigureNumber, lat, lng) {
-  return function() {
+  return function () {
     currentNineFigureNumber = nineFigureNumber;
     currentLatLng.lat = lat;
     currentLatLng.lng = lng;
@@ -501,7 +501,7 @@ function markClickHandler(nineFigureNumber, lat, lng) {
     console.log(nineFigureNumber);
     var closeButt = document.getElementById('close-info-box');
     if (closeButt) {
-      closeButt.addEventListener('click', function() {
+      closeButt.addEventListener('click', function () {
         var smesGMap = window.smesMap;
 
         smesGMap.infoBox.setVisible(false);
@@ -532,7 +532,7 @@ function domReadyHandler(nineFigureNumber, markName) {
 
   var downloadName = markName.replace(/  +/g, ' ');
 
-  return function() {
+  return function () {
     //Make sure any created mdl component is registered qith the mdl component handler
     componentHandler.upgradeAllRegistered();
 
@@ -546,7 +546,7 @@ function domReadyHandler(nineFigureNumber, markName) {
       if (address !== "") {
         addressDiv.innerHTML = address;
       } else {
-        smesMap.reverseGeocode(currentLatLng.lat, currentLatLng.lng).then(function(result) {
+        smesMap.reverseGeocode(currentLatLng.lat, currentLatLng.lng).then(function (result) {
           if (result !== "") {
             //Find address div if it is still on the screen by the time the address returns;
 
@@ -562,17 +562,17 @@ function domReadyHandler(nineFigureNumber, markName) {
 
 
     //Set-up button click for sketch
-    document.querySelector("[id=sketch" + nineFigureNumber + "]").addEventListener("click", function() {
+    document.querySelector("[id=sketch" + nineFigureNumber + "]").addEventListener("click", function () {
       console.log('Sketch: ' + nineFigureNumber);
 
       showBoxLoader();
 
-      markStore.getSurveyMarkSketchResponse(nineFigureNumber).then(function(pdfData) {
+      markStore.getSurveyMarkSketchResponse(nineFigureNumber).then(function (pdfData) {
         var blob = markStore.base64toBlob(pdfData.document, 'application/pdf');
 
         saveAs(blob, downloadName + '(' + nineFigureNumber + ') Sketch.pdf');
         hideBoxLoader();
-      }).catch(function(error) {
+      }).catch(function (error) {
         console.log("PDF retrieval failed");
         hideBoxLoader();
       });
@@ -580,17 +580,17 @@ function domReadyHandler(nineFigureNumber, markName) {
     }, false);
 
     //Set-up button click for report
-    document.querySelector("[id=report" + nineFigureNumber + "]").addEventListener("click", function() {
+    document.querySelector("[id=report" + nineFigureNumber + "]").addEventListener("click", function () {
       console.log('Report: ' + nineFigureNumber);
 
       showBoxLoader();
 
-      markStore.getSurveyMarkReportResponse(nineFigureNumber).then(function(pdfData) {
+      markStore.getSurveyMarkReportResponse(nineFigureNumber).then(function (pdfData) {
         var blob = markStore.base64toBlob(pdfData.document, 'application/pdf');
 
         saveAs(blob, downloadName + '(' + nineFigureNumber + ') Report.pdf');
         hideBoxLoader();
-      }).catch(function(error) {
+      }).catch(function (error) {
         console.log("PDF retrieval failed");
         hideBoxLoader();
       });
@@ -611,7 +611,7 @@ function checkSearchNineFigure() {
     //See if nine figure ca nb elocated
     var nineFigureString = searchText.value;
 
-    markStore.findNineFigureNumber(nineFigureString).then(function(val) {
+    markStore.findNineFigureNumber(nineFigureString).then(function (val) {
       smesMap.map.panTo(new google.maps.LatLng(val.lat, val.lng));
       //Make sure the map is zoomed in enough to display the marker
       if (smesMap.map.zoom < 17) {
@@ -620,16 +620,16 @@ function checkSearchNineFigure() {
       document.getElementById("location-search").blur();
       searchText.classList.remove("not-found");
 
-      window.setTimeout(function() {
+      window.setTimeout(function () {
         for (var markerCounter = 0; markerCounter < smesMap.markers.length; markerCounter++)
           if (smesMap.markers[markerCounter].nineFigureNo === parseInt(nineFigureString)) {
             smesMap.markers[markerCounter].openInfoBox();
 
             return;
-        }
+          }
       }, 0);
       return true;
-    }).catch(function(err) {
+    }).catch(function (err) {
       console.log(err);
       return false;
     });
@@ -643,8 +643,9 @@ function returnMarkType(surveyMark) {
   var isSCN = false,
     isPCM = false,
     hasAHD = false,
-    isSCNGDA94 = false,
-    isSCNAHD = false,
+    isSCNGDA2020 = false,
+    isLAHD = false,
+    hasLAHDADJdate = false,
     isDefective = hasAHD;
 
 
@@ -664,49 +665,55 @@ function returnMarkType(surveyMark) {
     if (String(surveyMark.nineFigureNumber).indexOf("1") === 0) {
       isPCM = true;
     }
-    //Retrieve GDA94 technique to determine whether SCN GDA94
-    if (surveyMark.gda94Technique.indexOf(scnGDA94Value) >= 0) {
-      isSCNGDA94 = true;
+    //Retrieve GDA2020 technique to determine whether SCN GDA2020
+    if (surveyMark.gda2020Technique.indexOf(scnGDA2020Value) >= 0) {
+      isSCNGDA2020 = true;
+    }
+    //Check AHD technique to determine whether it is spirit levelled
+    if (surveyMark.ahdTechnique.indexOf(LAHDValue) >= 0) {
+      isLAHD = true;
     }
 
-    //Check AHD technique to determine whether it is SCN AHD
-    scnAHDValues.forEach(function(ahdApproxValue) {
-      if (surveyMark.ahdTechnique.indexOf(ahdApproxValue) >= 0) {
-        isSCNAHD = true;
-      }
-    });
-
-    //Now all of the source values have been retrieved, work through possible combinations to determine correct symbol
-    if (isDefective) {
-      markType.iconName = "defective";
-      markType.markDetails = "Defective";
-
-    } else if (!isDefective && !isSCN && !hasAHD) {
-      markType.iconName = "gda94approx-pm";
-      markType.markDetails = "Non-SCN (GDA94)";
-    } else if (!isDefective && !isSCN && hasAHD) {
-      markType.iconName = "ahdapprox-pm";
-      markType.markDetails = "Non-SCN (GDA94), non-SCN (AHD)";
-    } else if (!isDefective && isSCN && isPCM) {
-      markType.iconName = "scn-gda94-pcm";
-      markType.markDetails = "SCN (GDA94)";
-    } else if (!isDefective && isSCN && !hasAHD && !isPCM) {
-      markType.iconName = "scn-gda94-pm";
-      markType.markDetails = "SCN (GDA94)";
-    } else if (!isDefective && isSCN && hasAHD && !isSCNGDA94) {
-      markType.iconName = "scn-ahd-pm";
-      markType.markDetails = "Non-SCN (GDA94), SCN (AHD)";
-    } else if (!isDefective && isSCN && hasAHD && isSCNGDA94 && isSCNAHD) {
-      markType.iconName = "scn-gda94-ahd-pm";
-      markType.markDetails = "SCN (GDA94), SCN (AHD)";
-    } else if (!isDefective && isSCN && hasAHD && isSCNGDA94 && !isSCNAHD) {
-      markType.iconName = "scn-gda94-ahdapprox-pm";
-      markType.markDetails = "Non-SCN (GDA94)";
+    //Check if there is an associated AHD Adjustment publish date
+    if (surveyMark.ahdPublishedDate !== "") {
+      hasLAHDADJdate = true;
     }
   }
+  //Now all of the source values have been retrieved, work through possible combinations to determine correct symbol
+  if (isDefective) {
+    markType.iconName = "defective";
+    markType.markDetails = "Defective";
 
-  return markType;
+  } else if (!isDefective && !isSCN && !hasAHD) {
+    markType.iconName = "gdaapprox-pm";
+      markType.markDetails = "Non-SCN (GDA)";
+  } else if (!isDefective && !isSCN && hasAHD) {
+    markType.iconName = "ahdest-pm";
+    markType.markDetails = "Non-SCN (GDA), Estimated AHD";
+  } else if (!isDefective && isPCM) {
+    markType.iconName = "pcm";
+    markType.markDetails = "PCM";
+  } else if (!isDefective && isSCN && isSCNGDA2020 && !hasAHD && !isPCM) {
+    markType.iconName = "scngda-pm";
+    markType.markDetails = "SCN (GDA)";
+  } else if (!isDefective && !isSCN && isLAHD && hasAHD && !isSCNGDA2020) {
+    markType.iconName = "lahd-pm";
+    markType.markDetails = "Non-SCN (GDA), AHD";
+  } else if (!isDefective && isSCN && hasAHD && isSCNGDA2020 && isLAHD) {
+    markType.iconName = "scngda-lahd-pm";
+    markType.markDetails = "SCN (GDA), AHD";
+  } else if (!isDefective && isSCN && hasAHD && isSCNGDA2020 && !isLAHD) {
+    markType.iconName = "scngda-ahdest-pm";
+    markType.markDetails = "SCN (GDA), Estimated AHD";
+} else if (!isDefective && !isSCN && hasAHD && isLAHD && hasLAHDADJdate && !isSCNGDA2020) {
+    markType.iconName = "ladjahd-pm";
+    markType.markDetails = "Non-SCN (GDA), Adjusted AHD";
+} else if (!isDefective && isSCN && hasAHD && hasLAHDADJdate && isSCNGDA2020 && isLAHD) {
+    markType.iconName = "scngda-ladjahd-pm";
+    markType.markDetails = "SCN (GDA), Adjusted AHD";
+  }
 
+return markType;
 }
 /**
  * Attempt to detect the page being used ona  mobile device.
@@ -737,7 +744,7 @@ function isMobile() {
 function displayError() {
   errorMsg.classList.remove("hidden");
   errorMsg.textContent = "Too many requests have been sent to the server.  Please wait...";
-  window.setTimeout(function() {
+  window.setTimeout(function () {
     clearError();
   }, 1000);
 }
