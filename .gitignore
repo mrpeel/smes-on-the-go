@@ -46,6 +46,12 @@ Temporary Items
 # =========================
 node_modules
 
+# Buyild & dist folders
+# =========================
+build
+dist
+
+
 # gh-pages
 # =========================
 .publish
