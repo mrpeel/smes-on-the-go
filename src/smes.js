@@ -444,7 +444,7 @@ function prepMarkForMap(surveyMark) {
     //'<div id="address' + surveyMark.nineFigureNumber + '" class="mark-address"></div>' +
     contentSDiv + 'Address:' + contentMDiv + '<div id="address' + surveyMark.nineFigureNumber + '"></div>' + contentEDiv +
     contentSDiv + 'GDA2020:' + contentMDiv + surveyMark.latitude + ', ' + surveyMark.longitude + contentEDiv +
-    contentSDiv + 'MGA:' + contentMDiv + surveyMark.zone + ', ' + surveyMark.easting + ', ' + surveyMark.northing + contentEDiv +
+    contentSDiv + 'MGA2020:' + contentMDiv + surveyMark.zone + ', ' + surveyMark.easting + ', ' + surveyMark.northing + contentEDiv +
     contentSDiv + 'Technique:' + contentMDiv + surveyMark.gda2020Technique + contentEDiv +
     contentSDiv + 'Ellipsoid height:' + contentMDiv + surveyMark.ellipsoidHeight + contentEDiv +
     contentSDiv + 'Uncertainty:' + contentMDiv + surveyMark.hUncertainty + contentEDiv +
@@ -648,7 +648,7 @@ function returnMarkType(surveyMark) {
     hasLAHDADJdate = false,
     isDefective = hasAHD;
 
-
+    
   if (surveyMark.status != "OK") {
     //Defective mark
     isDefective = true;
@@ -678,7 +678,10 @@ function returnMarkType(surveyMark) {
     if (surveyMark.ahdPublishedDate !== "") {
       hasLAHDADJdate = true;
     }
+
   }
+
+  
   //Now all of the source values have been retrieved, work through possible combinations to determine correct symbol
   if (isDefective) {
     markType.iconName = "defective";
@@ -687,6 +690,21 @@ function returnMarkType(surveyMark) {
   } else if (!isDefective && !isSCN && !hasAHD) {
     markType.iconName = "gdaapprox-pm";
       markType.markDetails = "Non-SCN (GDA)";
+  } else if (!isDefective && !isSCN && hasAHD && isLAHD && hasLAHDADJdate && !isSCNGDA2020) {
+    markType.iconName = "ladjahd-pm";
+    markType.markDetails = "Non-SCN (GDA), Adjusted AHD";
+  } else if (!isDefective && !isSCN && isLAHD && hasAHD && !isSCNGDA2020) {
+    markType.iconName = "lahd-pm";
+    markType.markDetails = "Non-SCN (GDA), AHD";
+  } else if (!isDefective && isSCN && hasAHD && hasLAHDADJdate && isSCNGDA2020 && isLAHD) {
+    markType.iconName = "scngda-ladjahd-pm";
+    markType.markDetails = "SCN (GDA), Adjusted AHD";
+  } else if (!isDefective && isSCN && hasAHD && isSCNGDA2020 && isLAHD) {
+    markType.iconName = "scngda-lahd-pm";
+    markType.markDetails = "SCN (GDA), AHD";
+  } else if (!isDefective && isSCN && hasAHD && isSCNGDA2020 && !isLAHD) {
+    markType.iconName = "scngda-ahdest-pm";
+    markType.markDetails = "SCN (GDA), Estimated AHD";
   } else if (!isDefective && !isSCN && hasAHD) {
     markType.iconName = "ahdest-pm";
     markType.markDetails = "Non-SCN (GDA), Estimated AHD";
@@ -696,21 +714,6 @@ function returnMarkType(surveyMark) {
   } else if (!isDefective && isSCN && isSCNGDA2020 && !hasAHD && !isPCM) {
     markType.iconName = "scngda-pm";
     markType.markDetails = "SCN (GDA)";
-  } else if (!isDefective && !isSCN && isLAHD && hasAHD && !isSCNGDA2020) {
-    markType.iconName = "lahd-pm";
-    markType.markDetails = "Non-SCN (GDA), AHD";
-  } else if (!isDefective && isSCN && hasAHD && isSCNGDA2020 && isLAHD) {
-    markType.iconName = "scngda-lahd-pm";
-    markType.markDetails = "SCN (GDA), AHD";
-  } else if (!isDefective && isSCN && hasAHD && isSCNGDA2020 && !isLAHD) {
-    markType.iconName = "scngda-ahdest-pm";
-    markType.markDetails = "SCN (GDA), Estimated AHD";
-} else if (!isDefective && !isSCN && hasAHD && isLAHD && hasLAHDADJdate && !isSCNGDA2020) {
-    markType.iconName = "ladjahd-pm";
-    markType.markDetails = "Non-SCN (GDA), Adjusted AHD";
-} else if (!isDefective && isSCN && hasAHD && hasLAHDADJdate && isSCNGDA2020 && isLAHD) {
-    markType.iconName = "scngda-ladjahd-pm";
-    markType.markDetails = "SCN (GDA), Adjusted AHD";
   }
 
 return markType;
