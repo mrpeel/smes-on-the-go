@@ -53,10 +53,13 @@ SMESMarkStore.prototype.retrieveStoredMarks = function () {
     var markKeys = Object.keys(smesMarkStore.markData);
 
     markKeys.forEach(function (nineFigureNumber) {
-      //Check when the data was last updated and make sure the data hash isn't present (hash was a previous implementation)
+      //Check when the data was last updated and 
+      // make sure the data hash isn't present (hash was a previous implementation)
+      // and check whjether it has the updated datum information
       if (
         smesMarkStore.markData[nineFigureNumber].lastUpdated > comparisonMSec &&
         !smesMarkStore.markData[nineFigureNumber].dataHash
+        && smesMarkStore.markData.gda2020Technique
       ) {
         smesMarkStore.loadMark.apply(smesMarkStore, [
           smesMarkStore.markData[nineFigureNumber],
